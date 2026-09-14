@@ -96,6 +96,13 @@ function cheer(big = false) { // a short noisy "whoo" from the crowd
   const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(big ? 0.3 : 0.16, t + 0.06); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   n.connect(f).connect(g).connect(audioCtx.destination); n.start(t); n.stop(t + dur + 0.02);
 }
+function roar() { // end-of-round crowd cheer: a long rising whoo with a few voices and a whistle
+  if (!audioCtx) return; const t = audioCtx.currentTime;
+  if (!noiseBuf) noise(t, 0.01, 0);
+  for (let v = 0; v < 3; v++) { const n = audioCtx.createBufferSource(); n.buffer = noiseBuf; const f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(500 + v * 200, t); f.frequency.exponentialRampToValueAtTime(2200 + v * 400, t + 1.2); f.Q.value = 1.1; const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t + v * 0.08); g.gain.exponentialRampToValueAtTime(0.28, t + 0.25 + v * 0.08); g.gain.setValueAtTime(0.28, t + 0.9); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6); n.connect(f).connect(g).connect(audioCtx.destination); n.start(t); n.stop(t + 1.7); }
+  [523, 659, 784, 1047, 1319].forEach((fr, i) => tone(fr, t + 0.1 + i * 0.09, 0.5, 'triangle', 0.1));
+  tone(2200, t + 0.5, 0.35, 'sine', 0.08, 3200); tone(3200, t + 0.85, 0.3, 'sine', 0.06, 2400); // whistle
+}
 function scratch() { // miss: a record scratch and a low boo
   if (!audioCtx) return; const t = audioCtx.currentTime; riff = Math.max(0, riff - 2);
   if (!noiseBuf) noise(t, 0.01, 0);
@@ -204,7 +211,7 @@ function endRound() {
   const total = notes.length, hits = stats.perfect + stats.good, pct = total ? Math.round(hits / total * 100) : 0;
   $('rPct').textContent = pct + '%'; $('rLine').textContent = hits + ' of ' + total + ' beats landed';
   $('resultTitle').textContent = pct >= 90 ? 'The club is yours.' : pct >= 70 ? 'Crowd is moving.' : pct >= 40 ? 'Warming up.' : 'They want the aux back.';
-  showcase = []; crowdFinal = pct >= 50 ? 'good' : 'bad';
+  showcase = []; crowdFinal = pct >= 50 ? 'good' : 'bad'; if (crowdFinal === 'good') roar(); else scratch();
   show('rbtns', false); clearTimeout(endRound.t); endRound.t = setTimeout(() => show('rbtns'), 5000);
   resultAt = performance.now();
   confetti = crowdFinal !== 'good' ? [] : Array.from({ length: 90 }, () => ({ x: Math.random() * W, y: -Math.random() * H, vx: (Math.random() - .5) * 40, vy: 80 + Math.random() * 120, r: 4 + Math.random() * 5, c: ['#ff5c8a', '#ffb3c8', '#b58cff', '#ffe052', '#fff7fb'][Math.floor(Math.random() * 5)], a: Math.random() * TAU }));
@@ -392,13 +399,13 @@ function drawFaceSticker() { // the verdict on the player's own face: shades + c
   const tilt = eyePos.L && eyePos.R ? Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x) : 0;
   const faceW = face ? Math.hypot(face.right.x - face.left.x, face.right.y - face.left.y) : eyeDist * 2.4;
   if (crowdFinal === 'good') {
-    img(STICKER.glasses, eyeMid.x, eyeMid.y, eyeDist * 3.1, { rot: tilt });                           // glasses span both eyes
+    img(STICKER.glasses, eyeMid.x, eyeMid.y, eyeDist * 2.7, { rot: tilt });                           // glasses span both eyes
     const chin = face ? face.chin : { x: eyeMid.x, y: eyeMid.y + eyeDist * 1.9 };
     img(STICKER.chain, chin.x, chin.y + faceW * 0.12, faceW * 1.7, { ay: 0 });                          // chain hangs from under the chin
   } else {
     const top = face ? face.top : { x: eyeMid.x, y: eyeMid.y - eyeDist * 1.2 };
     const t = performance.now() / 1000;
-    img(STICKER.frustrated, top.x, top.y - faceW * 0.12 + Math.sin(t * 3) * 3, faceW * 1.5, { ay: 1, rot: Math.sin(t * 2) * 0.04 }); // cloud hovers over the head
+    img(STICKER.frustrated, top.x, top.y - faceW * 0.08 + Math.sin(t * 3) * 3, faceW * 1.25, { ay: 1, rot: Math.sin(t * 2) * 0.04 }); // tangle hovers over the head
   }
 }
 function drawLights(dt) { // club lighting: a kick-synced pulse, two sweeping beams, a flash on every hit
