@@ -336,9 +336,8 @@ function drawInner() {
     const t = (performance.now() - resultAt) / 1000;
     { // the crowd gives the verdict: dancing or sulking, big and close
       const n = crowd.length, t = (performance.now() - resultAt) / 1000;
-      drawLights(dt);
-      crowd.forEach((c, i) => { const x = 19 + (i + 0.5) * (W - 38) / n, good = crowdFinal === 'good'; const bob = good ? Math.abs(Math.sin(t * 8 + c.bob)) * 22 : Math.sin(t * 1.5 + c.bob) * 3; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, BOOTH_TOP() + 610 * BOOTH_S - bob + (1 - k) * 140, { scale: 0.9, rot: good ? Math.sin(t * 8 + c.bob) * 0.1 : 0 }); });
-      drawBooth(dt);
+      drawLights(dt); drawBooth(dt);
+      crowd.forEach((c, i) => { const x = 19 + (i + 0.5) * (W - 38) / n, good = crowdFinal === 'good'; const bob = good ? Math.abs(Math.sin(t * 8 + c.bob)) * 22 : Math.sin(t * 1.5 + c.bob) * 3; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, H * 1.01 - bob + (1 - k) * 140, { scale: 0.85, rot: good ? Math.sin(t * 8 + c.bob) * 0.1 : 0 }); });
     }
     const dtc = (performance.now() - confettiAt) / 1000;
     for (const c of confetti) { const y = c.y + c.vy * dtc, x = c.x + c.vx * dtc + Math.sin(dtc * 3 + c.a) * 12; if (y > H + 10) continue; ctx.save(); ctx.translate(x, y); ctx.rotate(c.a + dtc * 4); ctx.fillStyle = c.c; ctx.fillRect(-c.r / 2, -c.r, c.r, c.r * 2); ctx.restore(); }
@@ -347,7 +346,7 @@ function drawInner() {
   if (mode === 'setup') { drawHearts(dt); return; }
   if (!['playing', 'countdown', 'howto'].includes(mode)) return;
   const hy = H * HIT_Y;
-  drawLights(dt); drawCrowd(); drawBooth(dt);
+  drawLights(dt); drawBooth(dt); drawCrowd();
   if (mode !== 'playing') return;
   // music notes dropping onto the decks
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -394,13 +393,13 @@ function drawLights(dt) { // club lighting: a kick-synced pulse, two sweeping be
   if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * 0.28})`; ctx.fillRect(0, 0, W, H); flash = Math.max(0, flash - dt * 4); }
 }
 function drawCrowd() { // five people behind the booth, upper half showing
-  const n = crowd.length, feet = BOOTH_TOP() + 600 * BOOTH_S; // feet just below the table's top edge, so the booth hides their legs
+  const n = crowd.length, feet = H * 1.01; // in the band below the booth, feet at the bottom edge
   crowd.forEach((c, i) => {
     if (c.state !== 'wait' && songTime > c.until) c.state = 'wait';
     const x = 19 + (i + 0.5) * (W - 38) / n, t = performance.now() / 1000; // kept out of the 19 px clip strips
     const bob = c.state === 'good' ? Math.abs(Math.sin(t * 9 + c.bob)) * 18 : c.state === 'bad' ? Math.sin(t * 14 + c.bob) * 2 : Math.sin(t * 2.2 + c.bob) * 3;
     const rot = c.state === 'good' ? Math.sin(t * 9 + c.bob) * 0.08 : 0;
-    sprite(PEOPLE[c.who][c.state], x, feet - bob, { scale: 0.78, rot });
+    sprite(PEOPLE[c.who][c.state], x, feet - bob, { scale: 0.72, rot });
   });
 }
 function drawBooth(dt) { // the booth, a little see-through; hands and targets on the platters; a dance floor below
@@ -412,7 +411,7 @@ function drawBooth(dt) { // the booth, a little see-through; hands and targets o
     pulse[i] += dt; hand[i] += dt; const k = Math.min(1, pulse[i] / 0.45);
     ctx.beginPath(); ctx.arc(x, hy, 38, 0, TAU); ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.5; ctx.stroke();
     if (k < 1) { ctx.beginPath(); ctx.arc(x, hy, 38 * (1 + k * 0.55), 0, TAU); ctx.fillStyle = `rgba(0,242,234,${0.45 * (1 - k)})`; ctx.fill(); }
-    const hImg = IMG[HAND[i]]; if (hImg && hImg.complete && hImg.naturalWidth) { const slam = Math.max(0, 1 - hand[i] / 0.18), hh = 104, hw = hh * hImg.naturalWidth / hImg.naturalHeight; ctx.save(); ctx.globalAlpha = 0.96; ctx.drawImage(hImg, x - hw / 2, hy - hh * 0.55 + 14 * slam - Math.sin(performance.now() / 600 + i) * 3, hw, hh); ctx.restore(); }
+    const hImg = IMG[HAND[i]]; if (hImg && hImg.complete && hImg.naturalWidth) { const slam = Math.max(0, 1 - hand[i] / 0.18), hh = 104, hw = hh * hImg.naturalWidth / hImg.naturalHeight; ctx.save(); ctx.globalAlpha = 0.96; ctx.translate(x, hy + 18 + 12 * slam - Math.sin(performance.now() / 600 + i) * 3); ctx.scale(1, -1); ctx.drawImage(hImg, -hw / 2, 0, hw, hh); ctx.restore(); } // flipped: the player's hands come down from above
   });
 }
 function heartPath(cx, cy, r) { // simple heart outline, r ≈ half width
