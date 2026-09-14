@@ -3,9 +3,9 @@ const $ = (id) => document.getElementById(id);
 const video = $('cam'), canvas = $('scene'), ctx = canvas.getContext('2d');
 const W = 390; let H = 693, DPR = 1;
 const BPM = 80, BEAT = 60 / BPM, SONG = 15, LEAD = 2.0;
-const PERFECT = 0.22, GOOD = 0.5; // generous: a wink is slower than a tap
+const PERFECT = 0.28, GOOD = 0.6; // generous: a wink is slower than a tap
 const BOOTH_W = W * 1.12, BOOTH_S = BOOTH_W / 900; // booth image is 900 px wide; platters at (238,677) and (662,677), table bottom at 830
-const BOOTH_TOP = () => H * 0.63 - 575 * BOOTH_S; // table top at 63% so the platters (the interaction) sit inside TikTok's core zone (y ≤ 533/694)
+const BOOTH_TOP = () => H * 0.67 - 575 * BOOTH_S; // table top at 63% so the platters (the interaction) sit inside TikTok's core zone (y ≤ 533/694)
 const LANE_X = [(W - BOOTH_W) / 2 + 238 * BOOTH_S, (W - BOOTH_W) / 2 + 662 * BOOTH_S]; let HIT_Y = 0.88; // judge line: a whole character at the hit moment stays inside the visual zone (y ≤ 545/694)
 
 let mode = 'idle'; // idle | setup | countdown | playing | result
@@ -38,6 +38,7 @@ function resize() {
   const r = $('phone').getBoundingClientRect();
   DPR = Math.min(2, window.devicePixelRatio || 1);
   H = Math.round(W * r.height / r.width); HIT_Y = (BOOTH_TOP() + 677 * BOOTH_S) / H; // platter centres
+  $('phone').style.setProperty('--band-top', ((BOOTH_TOP() + 800 * BOOTH_S) / H * 100).toFixed(1) + '%');
   canvas.width = W * DPR; canvas.height = H * DPR;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
@@ -220,8 +221,12 @@ function fire(lane, at = songTime) {
     if (!bothMode && n.lane === 2 && lane !== 2) continue;
     const d = Math.min(Math.abs(n.t - t), Math.abs(n.t - t2)); if (d <= win && d < bestD) { bestD = d; best = n; }
   }
+  let lenient = false;
+  if (!best) { // second pass: a wink read as "both" (or the other way round) still counts, capped at Good
+    for (const n of notes) { if (n.hit) continue; const win = n.id < 2 ? GOOD * 1.5 : GOOD; const d = Math.min(Math.abs(n.t - t), Math.abs(n.t - t2)); if (d <= win && d < bestD) { bestD = d; best = n; lenient = true; } }
+  }
   if (!best) { if (DEBUG) dlog('no note in window'); return; }
-  const grade = bestD <= PERFECT ? 'perfect' : 'good';
+  const grade = !lenient && bestD <= PERFECT ? 'perfect' : 'good';
   best.hit = grade; best.hitAt = songTime;
   if (DEBUG) dlog(`hit ${grade} note#${best.id} d=${(t - best.t).toFixed(3)}`);
   stats[grade]++; stats.combo++; stats.maxCombo = Math.max(stats.maxCombo, stats.combo); stats.score += grade === 'perfect' ? 100 : 60;
