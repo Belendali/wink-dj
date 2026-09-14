@@ -129,14 +129,12 @@ function sfx(kind) {
 function makeChart() {
   const list = []; let seed = Math.floor(Math.random() * 233280); const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280; // fresh pattern every round
   const beats = Math.floor(SONG / BEAT);
-  let lane = 0, lastDouble = -9;
+  let lane = 0;
   for (let b = 4; b < beats - 1; b++) {
     const t = b * BEAT;
-    if (b < 14 && b % 2) continue;                                                     // first half: one pedestrian every two beats, time to enjoy the swoon
-    if (b % 8 === 6) { list.push({ t, lane: 2 }); continue; }                          // a couple every 8 beats: both eyes
-    if (b >= 16 && b - lastDouble > 4 && rnd() < 0.25) { lastDouble = b; list.push({ t, lane }); lane = 1 - lane; list.push({ t: t + BEAT / 2, lane }); lane = 1 - lane; continue; }
-    if (rnd() < 0.65) lane = 1 - lane;
-    list.push({ t, lane });
+    if (b % 8 === 6) { list.push({ t, lane: 2 }); continue; }   // the drop
+    if (b < 12 && b % 2) continue;                                // ease in: every other beat at first
+    list.push({ t, lane }); lane = 1 - lane;                      // then strictly left, right, left, right
   }
   // casting: a shuffled deck of all ten, dealt without replacement, reshuffled when empty (no one repeats until everyone has walked by)
   let deck = [];
@@ -355,7 +353,7 @@ function drawInner() {
     { // the crowd gives the verdict: dancing or sulking, big and close
       const n = crowd.length, t = (performance.now() - resultAt) / 1000;
       drawLights(dt); drawBooth(dt); drawFaceSticker();
-      crowd.forEach((c, i) => { const x = 19 + (i + 0.5) * (W - 38) / n, good = crowdFinal === 'good'; const bob = good ? Math.abs(Math.sin(t * 8 + c.bob)) * 22 : Math.sin(t * 1.5 + c.bob) * 3; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, H * 1.01 - bob + (1 - k) * 140, { scale: 0.85, rot: good ? Math.sin(t * 8 + c.bob) * 0.1 : 0 }); });
+      crowd.forEach((c, i) => { const x = 19 + (i + 0.5) * (W - 38) / n, good = crowdFinal === 'good', dir = i % 2 ? -1 : 1, rock = Math.sin(t / BEAT * Math.PI); const bob = good ? Math.abs(rock) * 20 : 2; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, H * 1.01 - bob + (1 - k) * 140, { scale: 0.85, rot: good ? rock * 0.32 * dir : 0 }); });
     }
     const dtc = (performance.now() - confettiAt) / 1000;
     for (const c of confetti) { const y = c.y + c.vy * dtc, x = c.x + c.vx * dtc + Math.sin(dtc * 3 + c.a) * 12; if (y > H + 10) continue; ctx.save(); ctx.translate(x, y); ctx.rotate(c.a + dtc * 4); ctx.fillStyle = c.c; ctx.fillRect(-c.r / 2, -c.r, c.r, c.r * 2); ctx.restore(); }
@@ -423,13 +421,15 @@ function drawLights(dt) { // club lighting: a kick-synced pulse, two sweeping be
   });
   if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * 0.28})`; ctx.fillRect(0, 0, W, H); flash = Math.max(0, flash - dt * 4); }
 }
-function drawCrowd() { // five people behind the booth, upper half showing
-  const n = crowd.length, feet = H * 1.01; // in the band below the booth, feet at the bottom edge
+function drawCrowd() { // five people below the booth, rocking left-right on the beat like the Peanuts dance
+  const n = crowd.length, feet = H * 1.01;
+  const beat = mode === 'playing' ? songTime / BEAT : performance.now() / 1000 / BEAT;
+  const rock = Math.sin(beat * Math.PI);                         // one full sway per two beats: left on one, right on the next
   crowd.forEach((c, i) => {
     if (c.state !== 'wait' && songTime > c.until) c.state = 'wait';
-    const x = 19 + (i + 0.5) * (W - 38) / n, t = performance.now() / 1000; // kept out of the 19 px clip strips
-    const bob = c.state === 'good' ? Math.abs(Math.sin(t * 9 + c.bob)) * 18 : c.state === 'bad' ? Math.sin(t * 14 + c.bob) * 2 : Math.sin(t * 2.2 + c.bob) * 3;
-    const rot = c.state === 'good' ? Math.sin(t * 9 + c.bob) * 0.08 : 0;
+    const x = 19 + (i + 0.5) * (W - 38) / n, dir = i % 2 ? -1 : 1;
+    const amp = c.state === 'good' ? 0.3 : c.state === 'bad' ? 0.03 : 0.14;
+    const rot = rock * amp * dir, bob = c.state === 'good' ? Math.abs(rock) * 16 : Math.abs(rock) * 5;
     sprite(PEOPLE[c.who][c.state], x, feet - bob, { scale: 0.72, rot });
   });
 }
@@ -440,7 +440,8 @@ function drawBooth(dt) { // the booth, a little see-through; hands and targets o
   if (bImg && bImg.complete && bImg.naturalWidth) { ctx.save(); ctx.globalAlpha = 0.86; ctx.drawImage(bImg, (W - BOOTH_W) / 2, BOOTH_TOP(), BOOTH_W, 900 * BOOTH_S); ctx.restore(); }
   LANE_X.forEach((x, i) => {
     pulse[i] += dt; hand[i] += dt; const k = Math.min(1, pulse[i] / 0.45);
-    ctx.beginPath(); ctx.arc(x, hy, 38, 0, TAU); ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.5; ctx.stroke();
+    const nextNote = notes.find((nn) => !nn.hit && nn.t >= songTime - 0.1), cue = mode === 'playing' && nextNote && (nextNote.lane === i || nextNote.lane === 2) ? 0.35 : 0;
+    ctx.beginPath(); ctx.arc(x, hy, 38, 0, TAU); ctx.strokeStyle = `rgba(255,255,255,${0.4 + cue})`; ctx.lineWidth = 1.5 + cue * 4; ctx.stroke();
     if (k < 1) { ctx.beginPath(); ctx.arc(x, hy, 38 * (1 + k * 0.55), 0, TAU); ctx.fillStyle = `rgba(0,242,234,${0.45 * (1 - k)})`; ctx.fill(); }
     const hImg = IMG[HAND[i]]; if (hImg && hImg.complete && hImg.naturalWidth) { const slam = Math.max(0, 1 - hand[i] / 0.18), hh = 104, hw = hh * hImg.naturalWidth / hImg.naturalHeight; ctx.save(); ctx.globalAlpha = 0.96; ctx.translate(x, hy + 18 + 12 * slam - Math.sin(performance.now() / 600 + i) * 3); ctx.scale(1, -1); ctx.drawImage(hImg, -hw / 2, 0, hw, hh); ctx.restore(); } // flipped: the player's hands come down from above
   });
