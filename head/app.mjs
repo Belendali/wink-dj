@@ -204,7 +204,6 @@ function pickCrowd() { // five different people, fresh each round
 }
 function crowdReact(state, dur) { const t = songTime; for (const c of crowd) { c.state = state; c.until = t + dur + Math.random() * 0.25; } }
 function startNow() { // camera flow: the first nod is the start button, no countdown
-  basePitch = null; baseSamples = 0;
   notes = makeChart(); effects = []; confetti = []; blinkStats = { both: 0, single: 0 }; pickCrowd();
   stats = { perfect: 0, good: 0, miss: 0, combo: 0, maxCombo: 0, score: 0 }; updateHud();
   ensureAudio(); startAt = audioCtx.currentTime + 0.05; nextBeat = startAt; beatIndex = 0; clearTimeout(schedulerId); scheduleBeats(); sfx('go');
@@ -256,23 +255,25 @@ function judge(text) { const j = $('judge'); j.textContent = text; j.classList.a
 function updateHud() { $('score').textContent = stats.score; $('combo').textContent = stats.combo; }
 
 // head-pose state machine: turn left/right = left/right deck, a nod = the drop. Sunglasses stay on.
-let smRoll = 0, smPitch = 0, basePitch = null, baseSamples = 0, headArmed = true, nodArmed = true, faceAt = 0;
+let smRoll = 0, smPitch = 0, baseRoll = null, basePitch = null, baseSamples = 0, headArmed = true, nodArmed = true, faceAt = 0;
 let eyePos = { L: null, R: null }, face = null, hearts = [];
 let pulse = [0, 0], hand = [0, 0], flash = 0, riff = 0, crowd = [];
+const TILT = 0.15, TILT_REARM = 0.06, NOD = 0.12; // ~8.5° to trigger, back within ~3.5° to re-arm
 function handleHead(nose, L, R, chin) {
   faceAt = performance.now();
   const midY = (L.y + R.y) / 2, ed = Math.hypot(R.x - L.x, R.y - L.y) || 1;
-  const roll = Math.atan2(R.y - L.y, R.x - L.x);  // eye line angle: negative = head tilted toward screen-left, positive = screen-right
+  const roll = Math.atan2(R.y - L.y, R.x - L.x);  // eye line angle: negative = head tilted toward screen-left
   const pitch = (nose.y - midY) / ed;             // grows when the head drops into a nod
-  smRoll += (roll - smRoll) * 0.5; smPitch += (pitch - smPitch) * 0.5;
-  if (basePitch === null || baseSamples < 40) { basePitch = basePitch === null ? smPitch : basePitch + (smPitch - basePitch) * 0.1; baseSamples++; }
-  else basePitch += (smPitch - basePitch) * 0.01;
-  const TILT = 0.2; // ~11°
-  const tilt = smRoll < -TILT ? 0 : smRoll > TILT ? 1 : -1;
-  const nod = smPitch - basePitch > 0.16;
+  smRoll += (roll - smRoll) * 0.6; smPitch += (pitch - smPitch) * 0.6;
+  if (baseRoll === null || baseSamples < 30) { // learn your resting pose in the first half second (phone held crooked, head naturally tilted)
+    baseRoll = baseRoll === null ? smRoll : baseRoll + (smRoll - baseRoll) * 0.15; basePitch = basePitch === null ? smPitch : basePitch + (smPitch - basePitch) * 0.15; baseSamples++;
+  } else if (Math.abs(smRoll - baseRoll) < TILT_REARM && smPitch - basePitch < NOD * 0.5) { baseRoll += (smRoll - baseRoll) * 0.02; basePitch += (smPitch - basePitch) * 0.02; } // drift only while resting
+  const r = smRoll - baseRoll, tilt = r < -TILT ? 0 : r > TILT ? 1 : -1;
+  const nod = smPitch - basePitch > NOD;
   $('eyeL').classList.toggle('on', tilt === 0 || nod); $('eyeR').classList.toggle('on', tilt === 1 || nod);
+  if (DEBUG && mode === 'playing') dlog(`roll ${(r * 57.3).toFixed(0)}° pitch ${(smPitch - basePitch).toFixed(2)}`);
   const now = performance.now();
-  if (Math.abs(smRoll) < TILT * 0.5) headArmed = true;   // back near level re-arms the tilt
+  if (Math.abs(r) < TILT_REARM) headArmed = true;
   if (!nod) nodArmed = true;
   if (nod && nodArmed) { nodArmed = false; onHead(2, now); return; }
   if (tilt !== -1 && headArmed) { headArmed = false; onHead(tilt, now); }
@@ -363,6 +364,14 @@ function drawInner() {
   if (!['playing', 'countdown', 'howto'].includes(mode)) return;
   const hy = H * HIT_Y;
   drawLights(dt); drawBooth(dt); drawCrowd(); drawShades();
+  if (mode === 'howto') { // the guide: one of the crowd rocking their head left and right, like the Peanuts kids
+    const t = performance.now() / 1000, rock = Math.sin(t * Math.PI / BEAT * 1), gy = H * 0.56;
+    ctx.save(); ctx.translate(W / 2, gy); ctx.rotate(rock * 0.28); ctx.translate(-W / 2, -gy); sprite(PEOPLE[0].good, W / 2, gy, { scale: 0.95 }); ctx.restore();
+    ctx.font = '900 34px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = rock < -0.2 ? '#00f2ea' : 'rgba(255,255,255,.45)'; ctx.fillText('←', W * 0.2, gy - 80);
+    ctx.fillStyle = rock > 0.2 ? '#00f2ea' : 'rgba(255,255,255,.45)'; ctx.fillText('→', W * 0.8, gy - 80);
+    ctx.textBaseline = 'alphabetic';
+  }
   if (mode !== 'playing') return;
   // music notes dropping onto the decks
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

@@ -81,3 +81,6 @@ h2 { font-size: 24px; margin: 8px 0 8px; }
 .phone.howto .hud-top { display: none; }
 
 .band { position: absolute; left: 0; right: 0; top: var(--band-top, 82%); bottom: 0; background: rgba(11,11,22,.45); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+
+.howto { padding-top: 12%; justify-content: flex-start; }
+.howto em { margin-top: 6px; }
