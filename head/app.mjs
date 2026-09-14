@@ -185,9 +185,8 @@ function stopCamera() { if (stream) { stream.getTracks().forEach((t) => t.stop()
 function showHowto() {
   ensureAudio(); setMode('howto'); clearTimeout(beginCountdown.t); guideStep = 0; guideDone = [false, false, false]; guideDoneAt = performance.now(); baseRoll = null; basePitch = null; baseSamples = 0;
   if (!practice) { let k = 0; clearInterval(showHowto.iv); showHowto.iv = setInterval(() => { guideDone[k] = true; guideStep = ++k; guideDoneAt = performance.now(); sfx('count'); if (k >= GUIDE.length) { clearInterval(showHowto.iv); setTimeout(() => { if (mode === 'howto') startNow(); }, 400); } }, 1000); }
-  $('howtoCta').textContent = practice ? 'Starting…' : 'Blink to start';
+  $('howtoCta').textContent = practice ? 'Starting…' : 'Follow along';
   if (practice) { let k = 0; const iv = setInterval(() => { guideDone[k] = true; guideStep = ++k; guideDoneAt = performance.now(); if (k >= GUIDE.length) { clearInterval(iv); beginCountdown.t = setTimeout(startCountdown, 500); } }, 900); }
-  // camera: the first detected blink starts the round, which also proves tracking is live
 }
 function beginCountdown() { showHowto(); }
 function startCountdown() {
