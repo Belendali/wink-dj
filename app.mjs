@@ -337,7 +337,7 @@ function drawInner() {
     { // the crowd gives the verdict: dancing or sulking, big and close
       const n = crowd.length, t = (performance.now() - resultAt) / 1000;
       drawLights(dt);
-      crowd.forEach((c, i) => { const x = (i + 0.5) * W / n, good = crowdFinal === 'good'; const bob = good ? Math.abs(Math.sin(t * 8 + c.bob)) * 22 : Math.sin(t * 1.5 + c.bob) * 3; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, BOOTH_TOP() + 22 * BOOTH_S + 60 - bob + (1 - k) * 140, { scale: 0.9, rot: good ? Math.sin(t * 8 + c.bob) * 0.1 : 0 }); });
+      crowd.forEach((c, i) => { const x = 19 + (i + 0.5) * (W - 38) / n, good = crowdFinal === 'good'; const bob = good ? Math.abs(Math.sin(t * 8 + c.bob)) * 22 : Math.sin(t * 1.5 + c.bob) * 3; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, BOOTH_TOP() + 610 * BOOTH_S - bob + (1 - k) * 140, { scale: 0.9, rot: good ? Math.sin(t * 8 + c.bob) * 0.1 : 0 }); });
       drawBooth(dt);
     }
     const dtc = (performance.now() - confettiAt) / 1000;
@@ -394,10 +394,10 @@ function drawLights(dt) { // club lighting: a kick-synced pulse, two sweeping be
   if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * 0.28})`; ctx.fillRect(0, 0, W, H); flash = Math.max(0, flash - dt * 4); }
 }
 function drawCrowd() { // five people behind the booth, upper half showing
-  const n = crowd.length, feet = BOOTH_TOP() + 22 * BOOTH_S + 46;
+  const n = crowd.length, feet = BOOTH_TOP() + 600 * BOOTH_S; // feet just below the table's top edge, so the booth hides their legs
   crowd.forEach((c, i) => {
     if (c.state !== 'wait' && songTime > c.until) c.state = 'wait';
-    const x = (i + 0.5) * W / n, t = performance.now() / 1000;
+    const x = 19 + (i + 0.5) * (W - 38) / n, t = performance.now() / 1000; // kept out of the 19 px clip strips
     const bob = c.state === 'good' ? Math.abs(Math.sin(t * 9 + c.bob)) * 18 : c.state === 'bad' ? Math.sin(t * 14 + c.bob) * 2 : Math.sin(t * 2.2 + c.bob) * 3;
     const rot = c.state === 'good' ? Math.sin(t * 9 + c.bob) * 0.08 : 0;
     sprite(PEOPLE[c.who][c.state], x, feet - bob, { scale: 0.78, rot });
