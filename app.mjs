@@ -21,9 +21,12 @@ let audioCtx = null, schedulerId = 0, nextBeat = 0, beatIndex = 0;
 // ---------- people (one walk image + reaction images per character) ----------
 const PEOPLE = Array.from({ length: 10 }, (_, i) => { const n = String(i + 1).padStart(2, '0'); return { wait: `assets/people/p${n}-wait.png`, good: `assets/people/p${n}-good.png`, bad: `assets/people/p${n}-bad.png` }; });
 const BOOTH = 'assets/booth/booth.png', HAND = ['assets/booth/hand-left.png', 'assets/booth/hand-right.png'];
+const NOTE = ['assets/stickers/note-pink.png', 'assets/stickers/note-cyan.png', 'assets/stickers/note-record.png'];
+const STICKER = { glasses: 'assets/stickers/sunglasses.png', chain: 'assets/stickers/chain.png', frustrated: 'assets/stickers/frustrated.png' };
 const IMG = {};
 function loadImg(src) { if (IMG[src]) return IMG[src]; const i = new Image(); i.src = src; IMG[src] = i; return i; }
-PEOPLE.forEach((p) => Object.values(p).forEach(loadImg)); loadImg(BOOTH); HAND.forEach(loadImg);
+PEOPLE.forEach((p) => Object.values(p).forEach(loadImg)); loadImg(BOOTH); HAND.forEach(loadImg); NOTE.forEach(loadImg); Object.values(STICKER).forEach(loadImg);
+function img(src, x, y, w, opts = {}) { const i = loadImg(src); if (!ready(src)) return false; const h = w * i.naturalHeight / i.naturalWidth; ctx.save(); ctx.translate(x, y); ctx.rotate(opts.rot || 0); ctx.globalAlpha = opts.alpha ?? 1; ctx.drawImage(i, -w / 2, -h * (opts.ay ?? 0.5), w, h); ctx.restore(); return true; }
 const ready = (src) => { const i = IMG[src]; return i && i.complete && i.naturalWidth > 0; };
 const PERSON_H = 150;
 function sprite(src, x, baseY, opts = {}) {
@@ -245,6 +248,7 @@ function updateHud() { $('score').textContent = stats.score; $('combo').textCont
 // Scores are smoothed a little; thresholds are relative so people with "lazy" winks still register.
 let smL = 0, smR = 0, faceAt = 0;
 let eyePos = { L: null, R: null }; // canvas coords of the player's eyes
+let face = null; // chin / top / left / right, canvas coords
 let hearts = [];
 let pulse = [0, 0]; // seconds since the last wink on each lane
 let crowd = []; // five audience members: { who, state, until }
@@ -341,7 +345,7 @@ function drawInner() {
     const t = (performance.now() - resultAt) / 1000;
     { // the crowd gives the verdict: dancing or sulking, big and close
       const n = crowd.length, t = (performance.now() - resultAt) / 1000;
-      drawLights(dt); drawBooth(dt);
+      drawLights(dt); drawBooth(dt); drawFaceSticker();
       crowd.forEach((c, i) => { const x = 19 + (i + 0.5) * (W - 38) / n, good = crowdFinal === 'good'; const bob = good ? Math.abs(Math.sin(t * 8 + c.bob)) * 22 : Math.sin(t * 1.5 + c.bob) * 3; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, H * 1.01 - bob + (1 - k) * 140, { scale: 0.85, rot: good ? Math.sin(t * 8 + c.bob) * 0.1 : 0 }); });
     }
     const dtc = (performance.now() - confettiAt) / 1000;
@@ -360,11 +364,11 @@ function drawInner() {
     const k = 1 - dt2 / LEAD, y = hy - (dt2 / LEAD) * (hy + 60);
     const lanes = n.lane === 2 ? [0, 1] : [n.lane];
     for (const l of lanes) {
-      const glyph = n.lane === 2 ? '🎶' : l ? '🎵' : '🎵';
+      const src = NOTE[n.lane === 2 ? 2 : l];
       if (n.hit === 'miss') { const m = Math.min(1, (songTime - n.t) / 0.5); ctx.globalAlpha = 1 - m; ctx.font = '40px system-ui'; ctx.fillText('💥', LANE_X[l], hy - m * 30); ctx.globalAlpha = 1; continue; }
-      if (n.hit) { const m = Math.min(1, (songTime - n.hitAt) / 0.5); ctx.globalAlpha = 1 - m; ctx.font = (40 + m * 40) + 'px system-ui'; ctx.fillText(glyph, LANE_X[l], hy - m * 40); ctx.globalAlpha = 1; continue; }
+      if (n.hit) { const m = Math.min(1, (songTime - n.hitAt) / 0.5); if (!img(src, LANE_X[l], hy - m * 40, 64 + m * 50, { alpha: 1 - m, rot: m * 0.6 })) { ctx.globalAlpha = 1 - m; ctx.font = (40 + m * 40) + 'px system-ui'; ctx.fillText('🎵', LANE_X[l], hy - m * 40); ctx.globalAlpha = 1; } continue; }
       const near = Math.max(0, (k - 0.45) / 0.55); ctx.beginPath(); ctx.arc(LANE_X[l], y, 38, 0, TAU); ctx.fillStyle = `rgba(0,242,234,${0.06 + near * 0.3})`; ctx.fill();
-      ctx.font = (30 + 14 * k) + 'px system-ui'; ctx.save(); ctx.translate(LANE_X[l], y); ctx.rotate(Math.sin(songTime * 6 + n.id) * 0.15); ctx.fillText(glyph, 0, 0); ctx.restore();
+      if (!img(src, LANE_X[l], y, (n.lane === 2 ? 60 : 50) + 22 * k, { rot: Math.sin(songTime * 6 + n.id) * 0.15 })) { ctx.font = (30 + 14 * k) + 'px system-ui'; ctx.fillText('🎵', LANE_X[l], y); }
     }
     if (n.lane === 2 && !n.hit) { ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.setLineDash([4, 6]); ctx.beginPath(); ctx.moveTo(LANE_X[0] + 34, y); ctx.lineTo(LANE_X[1] - 34, y); ctx.stroke(); ctx.setLineDash([]); }
   }
@@ -381,6 +385,21 @@ function drawInner() {
   effects = effects.filter((e) => songTime - e.at < 0.7);
   drawHearts(dt);
   ctx.textBaseline = 'alphabetic';
+}
+function drawFaceSticker() { // the verdict on the player's own face: shades + chain, or a frustration cloud
+  const eyeMid = eyePos.L && eyePos.R ? { x: (eyePos.L.x + eyePos.R.x) / 2, y: (eyePos.L.y + eyePos.R.y) / 2 } : { x: W / 2, y: H * 0.26 };
+  const eyeDist = eyePos.L && eyePos.R ? Math.hypot(eyePos.R.x - eyePos.L.x, eyePos.R.y - eyePos.L.y) : 60;
+  const tilt = eyePos.L && eyePos.R ? Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x) : 0;
+  const faceW = face ? Math.hypot(face.right.x - face.left.x, face.right.y - face.left.y) : eyeDist * 2.4;
+  if (crowdFinal === 'good') {
+    img(STICKER.glasses, eyeMid.x, eyeMid.y, eyeDist * 3.1, { rot: tilt });                           // glasses span both eyes
+    const chin = face ? face.chin : { x: eyeMid.x, y: eyeMid.y + eyeDist * 1.9 };
+    img(STICKER.chain, chin.x, chin.y + faceW * 0.12, faceW * 1.7, { ay: 0 });                          // chain hangs from under the chin
+  } else {
+    const top = face ? face.top : { x: eyeMid.x, y: eyeMid.y - eyeDist * 1.2 };
+    const t = performance.now() / 1000;
+    img(STICKER.frustrated, top.x, top.y - faceW * 0.12 + Math.sin(t * 3) * 3, faceW * 1.5, { ay: 1, rot: Math.sin(t * 2) * 0.04 }); // cloud hovers over the head
+  }
 }
 function drawLights(dt) { // club lighting: a kick-synced pulse, two sweeping beams, a flash on every hit
   const beatPos = mode === 'playing' ? ((songTime % BEAT) + BEAT) % BEAT / BEAT : (performance.now() / 1000 % BEAT) / BEAT;
@@ -432,7 +451,7 @@ function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.a
 function loop() {
   requestAnimationFrame(loop);
   if (mode === 'playing') songTime = audioCtx.currentTime - startAt;
-  if (landmarker && stream && video.readyState >= 2 && video.currentTime !== lastVideoTime && ['setup', 'howto', 'playing', 'countdown'].includes(mode)) {
+  if (landmarker && stream && video.readyState >= 2 && video.currentTime !== lastVideoTime && ['setup', 'howto', 'playing', 'countdown', 'result'].includes(mode)) {
     lastVideoTime = video.currentTime;
     try {
       const res = landmarker.detectForVideo(video, performance.now());
@@ -442,7 +461,7 @@ function loop() {
           const vw = video.videoWidth, vh = video.videoHeight, s = Math.max(W / vw, H / vh), dw = vw * s, dh = vh * s;
           return { x: (W - dw) / 2 + (1 - lm[i].x) * dw, y: (H - dh) / 2 + lm[i].y * dh }; };
         const mid = (a, b) => { const p = toC(a), q = toC(b); return { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }; };
-        eyePos = { L: mid(159, 145), R: mid(386, 374) }; }
+        eyePos = { L: mid(159, 145), R: mid(386, 374) }; face = { chin: toC(152), top: toC(10), left: toC(234), right: toC(454) }; }
       if (bs) { const get = (name) => (bs.categories.find((c) => c.categoryName === name) || {}).score || 0; handleEyes(get('eyeBlinkLeft'), get('eyeBlinkRight')); }
 
     } catch (e) { /* skip frame */ }
