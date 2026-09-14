@@ -4,7 +4,9 @@ const video = $('cam'), canvas = $('scene'), ctx = canvas.getContext('2d');
 const W = 390; let H = 693, DPR = 1;
 const BPM = 80, BEAT = 60 / BPM, SONG = 15, LEAD = 2.0;
 const PERFECT = 0.22, GOOD = 0.5; // generous: a wink is slower than a tap
-const LANE_X = [W * 0.265, W * 0.735], HIT_Y = 0.655; // the two platters // judge line: a whole character at the hit moment stays inside the visual zone (y ≤ 545/694)
+const BOOTH_W = W * 1.12, BOOTH_S = BOOTH_W / 900; // booth image is 900 px wide; platters at (238,677) and (662,677), table bottom at 830
+const BOOTH_TOP = () => H * 0.995 - 830 * BOOTH_S;
+const LANE_X = [(W - BOOTH_W) / 2 + 238 * BOOTH_S, (W - BOOTH_W) / 2 + 662 * BOOTH_S]; let HIT_Y = 0.88; // judge line: a whole character at the hit moment stays inside the visual zone (y ≤ 545/694)
 
 let mode = 'idle'; // idle | setup | countdown | playing | result
 let practice = false, bothMode = false;
@@ -35,7 +37,7 @@ function sprite(src, x, baseY, opts = {}) {
 function resize() {
   const r = $('phone').getBoundingClientRect();
   DPR = Math.min(2, window.devicePixelRatio || 1);
-  H = Math.round(W * r.height / r.width);
+  H = Math.round(W * r.height / r.width); HIT_Y = (BOOTH_TOP() + 677 * BOOTH_S) / H; // platter centres
   canvas.width = W * DPR; canvas.height = H * DPR;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
@@ -74,23 +76,33 @@ function scheduleBeats() {
   }
   schedulerId = setTimeout(scheduleBeats, 60);
 }
-// crowd: a noisy "whoo" for a hit, a low "boo" for a miss
-function cheer(big = false) {
-  if (!audioCtx) return; const t = audioCtx.currentTime, dur = big ? 0.7 : 0.45;
-  const n = audioCtx.createBufferSource(); if (!noiseBuf) noise(t, 0.01, 0); n.buffer = noiseBuf; const f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(700, t); f.frequency.exponentialRampToValueAtTime(big ? 2400 : 1600, t + dur); f.Q.value = 1.2;
-  const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(big ? 0.5 : 0.32, t + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  n.connect(f).connect(g).connect(audioCtx.destination); n.start(t); n.stop(t + dur + 0.02);
-  [523, 659, 784].forEach((fr, i) => tone(fr * (big ? 1.5 : 1), t + 0.05 + i * 0.04, 0.35, 'triangle', 0.09)); // a few voices in the whoo
+// hits are musical: every hit plays the next step of a riff, so a streak becomes a melody
+const RIFF = [523, 659, 784, 880, 784, 659, 1047, 880, 784, 659, 587, 523];
+function hitSound(lane, big) {
+  if (!audioCtx) return; const t = audioCtx.currentTime, f = RIFF[riff++ % RIFF.length];
+  if (lane === 2) { [f, f * 1.25, f * 1.5].forEach((x, i) => tone(x, t + i * 0.03, 0.5, 'sawtooth', 0.09)); tone(f / 4, t, 0.6, 'square', 0.12); } // the drop: a chord + sub
+  else { tone(f * (lane ? 1 : 0.5), t, big ? 0.45 : 0.28, lane ? 'triangle' : 'square', big ? 0.22 : 0.16); tone(f * (lane ? 2 : 1), t + 0.02, 0.2, 'sine', 0.08); }
+  if (big) [f * 2, f * 3].forEach((x, i) => tone(x, t + 0.12 + i * 0.05, 0.25, 'sine', 0.06));
+  cheer(big);
 }
-function boo() {
-  if (!audioCtx) return; const t = audioCtx.currentTime;
-  [110, 138, 92].forEach((fr, i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(), f = audioCtx.createBiquadFilter(); o.type = 'sawtooth'; o.frequency.setValueAtTime(fr, t); o.frequency.exponentialRampToValueAtTime(fr * 0.8, t + 0.6); f.type = 'lowpass'; f.frequency.value = 500; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.06 + i * 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.65); o.connect(f).connect(g).connect(audioCtx.destination); o.start(t); o.stop(t + 0.7); });
+function cheer(big = false) { // a short noisy "whoo" from the crowd
+  const t = audioCtx.currentTime, dur = big ? 0.6 : 0.35;
+  if (!noiseBuf) noise(t, 0.01, 0);
+  const n = audioCtx.createBufferSource(); n.buffer = noiseBuf; const f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(600, t); f.frequency.exponentialRampToValueAtTime(big ? 2200 : 1400, t + dur); f.Q.value = 1.4;
+  const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(big ? 0.3 : 0.16, t + 0.06); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  n.connect(f).connect(g).connect(audioCtx.destination); n.start(t); n.stop(t + dur + 0.02);
+}
+function scratch() { // miss: a record scratch and a low boo
+  if (!audioCtx) return; const t = audioCtx.currentTime; riff = Math.max(0, riff - 2);
+  if (!noiseBuf) noise(t, 0.01, 0);
+  const n = audioCtx.createBufferSource(); n.buffer = noiseBuf; n.playbackRate.setValueAtTime(1.6, t); n.playbackRate.exponentialRampToValueAtTime(0.25, t + 0.3);
+  const f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(3000, t); f.frequency.exponentialRampToValueAtTime(300, t + 0.3); f.Q.value = 2;
+  const g = audioCtx.createGain(); g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.32); n.connect(f).connect(g).connect(audioCtx.destination); n.start(t); n.stop(t + 0.35);
+  [110, 92].forEach((fr, i) => tone(fr, t + 0.1 + i * 0.05, 0.5, 'sawtooth', 0.07, fr * 0.8));
 }
 function sfx(kind) {
   if (!audioCtx) return; const t = audioCtx.currentTime;
-  if (kind === 'perfect') { [784, 988, 1319, 1568].forEach((f, i) => tone(f, t + 0.25 + i * 0.05, 0.2, 'triangle', 0.1)); } // sparkle, after the voice
-  if (kind === 'good') { tone(600, t, 0.08, 'triangle', 0.12, 900); }                            // pop
-  if (kind === 'miss') { tone(220, t, 0.18, 'sawtooth', 0.1, 160); tone(160, t + 0.16, 0.25, 'sawtooth', 0.08, 90); }                    // womp womp
+  if (kind === 'perfect' || kind === 'good' || kind === 'miss') return; // handled by hitSound / scratch
   if (kind === 'count') tone(660, t, 0.1, 'square', 0.12);
   if (kind === 'land') { tone(120, t, 0.08, 'sine', 0.2, 60); noise(t, 0.04, 0.05); }
   if (kind === 'go') tone(990, t, 0.3, 'square', 0.14);
@@ -215,11 +227,11 @@ function fire(lane, at = songTime) {
   stats[grade]++; stats.combo++; stats.maxCombo = Math.max(stats.maxCombo, stats.combo); stats.score += grade === 'perfect' ? 100 : 60;
   effects.push({ kind: grade, lane: best.lane, at: t });
   judge(grade === 'perfect' ? 'PERFECT' : 'GOOD'); sfx(grade); shootHearts(best.lane, grade === 'perfect' ? 8 : 4, true);
-  crowdReact('good', grade === 'perfect' ? 1.3 : 0.9); cheer(grade === 'perfect'); if (best.lane === 2) hand = [0, 0]; else hand[best.lane] = 0;
+  crowdReact('good', grade === 'perfect' ? 1.3 : 0.9); hitSound(best.lane, grade === 'perfect'); flash = grade === 'perfect' ? 1 : 0.6; if (best.lane === 2) hand = [0, 0]; else hand[best.lane] = 0;
   if (grade === 'perfect' && (!faceBest || Math.random() < 0.4)) faceBest = grabFace();
   updateHud();
 }
-function missNote(n) { if (DEBUG) dlog(`miss note#${n.id} at ${songTime.toFixed(2)}`); crowdReact('bad', 1.1); boo(); n.hit = 'miss'; stats.miss++; stats.combo = 0; effects.push({ kind: 'miss', lane: n.lane, at: songTime }); judge('MISS'); sfx('miss'); if (!faceWorst || Math.random() < 0.5) faceWorst = grabFace(); updateHud(); }
+function missNote(n) { if (DEBUG) dlog(`miss note#${n.id} at ${songTime.toFixed(2)}`); crowdReact('bad', 1.1); scratch(); n.hit = 'miss'; stats.miss++; stats.combo = 0; effects.push({ kind: 'miss', lane: n.lane, at: songTime }); judge('MISS'); sfx('miss'); if (!faceWorst || Math.random() < 0.5) faceWorst = grabFace(); updateHud(); }
 let judgeTimer = 0;
 function judge(text) { const j = $('judge'); j.textContent = text; j.classList.add('show'); clearTimeout(judgeTimer); judgeTimer = setTimeout(() => j.classList.remove('show'), 350); }
 function updateHud() { $('score').textContent = stats.score; $('combo').textContent = stats.combo; }
@@ -232,6 +244,8 @@ let hearts = [];
 let pulse = [0, 0]; // seconds since the last wink on each lane
 let crowd = []; // five audience members: { who, state, until }
 let hand = [0, 0]; // seconds since each hand slammed
+let flash = 0; // hit flash, decays
+let riff = 0; // position in the hit melody
 function handleEyes(rawL, rawR) {
   faceAt = performance.now();
   smL += (rawL - smL) * 0.5; smR += (rawR - smR) * 0.5;
@@ -322,7 +336,9 @@ function drawInner() {
     const t = (performance.now() - resultAt) / 1000;
     { // the crowd gives the verdict: dancing or sulking, big and close
       const n = crowd.length, t = (performance.now() - resultAt) / 1000;
-      crowd.forEach((c, i) => { const x = (i + 0.5) * W / n, good = crowdFinal === 'good'; const bob = good ? Math.abs(Math.sin(t * 8 + c.bob)) * 22 : Math.sin(t * 1.5 + c.bob) * 3; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, H * 1.02 - bob + (1 - k) * 140, { scale: 1.05, rot: good ? Math.sin(t * 8 + c.bob) * 0.1 : 0 }); });
+      drawLights(dt);
+      crowd.forEach((c, i) => { const x = (i + 0.5) * W / n, good = crowdFinal === 'good'; const bob = good ? Math.abs(Math.sin(t * 8 + c.bob)) * 22 : Math.sin(t * 1.5 + c.bob) * 3; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, H * 0.9 - bob + (1 - k) * 140, { scale: 1.0, rot: good ? Math.sin(t * 8 + c.bob) * 0.1 : 0 }); });
+      drawBooth(dt);
     }
     const dtc = (performance.now() - confettiAt) / 1000;
     for (const c of confetti) { const y = c.y + c.vy * dtc, x = c.x + c.vx * dtc + Math.sin(dtc * 3 + c.a) * 12; if (y > H + 10) continue; ctx.save(); ctx.translate(x, y); ctx.rotate(c.a + dtc * 4); ctx.fillStyle = c.c; ctx.fillRect(-c.r / 2, -c.r, c.r, c.r * 2); ctx.restore(); }
@@ -331,18 +347,20 @@ function drawInner() {
   if (mode === 'setup') { drawHearts(dt); return; }
   if (!['playing', 'countdown', 'howto'].includes(mode)) return;
   const hy = H * HIT_Y;
-  drawStage(dt);
+  drawLights(dt); drawCrowd(); drawBooth(dt);
   if (mode !== 'playing') return;
-  // records dropping onto the platters
+  // music notes dropping onto the decks
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const n of notes) {
     const dt2 = n.t - songTime; if (dt2 > LEAD || dt2 < -0.8) continue;
     const k = 1 - dt2 / LEAD, y = hy - (dt2 / LEAD) * (hy + 60);
     const lanes = n.lane === 2 ? [0, 1] : [n.lane];
     for (const l of lanes) {
-      if (n.hit === 'miss') { const m = Math.min(1, (songTime - n.t) / 0.5); ctx.globalAlpha = 1 - m; record(LANE_X[l] + (l ? 1 : -1) * m * 50, hy + m * 90, 1, songTime * 8, true); ctx.globalAlpha = 1; continue; }
-      if (n.hit) { const m = Math.min(1, (songTime - n.hitAt) / 0.5); ctx.globalAlpha = 1 - m; record(LANE_X[l], hy, 1 + m * 0.6, songTime * 20); ctx.globalAlpha = 1; continue; }
-      const near = Math.max(0, (k - 0.45) / 0.55); ctx.beginPath(); ctx.arc(LANE_X[l], y, 40, 0, TAU); ctx.fillStyle = `rgba(0,242,234,${0.06 + near * 0.28})`; ctx.fill();
-      record(LANE_X[l], y, 0.75 + 0.25 * k, songTime * 6 + n.id);
+      const glyph = n.lane === 2 ? '🎶' : l ? '🎵' : '🎵';
+      if (n.hit === 'miss') { const m = Math.min(1, (songTime - n.t) / 0.5); ctx.globalAlpha = 1 - m; ctx.font = '40px system-ui'; ctx.fillText('💥', LANE_X[l], hy - m * 30); ctx.globalAlpha = 1; continue; }
+      if (n.hit) { const m = Math.min(1, (songTime - n.hitAt) / 0.5); ctx.globalAlpha = 1 - m; ctx.font = (40 + m * 40) + 'px system-ui'; ctx.fillText(glyph, LANE_X[l], hy - m * 40); ctx.globalAlpha = 1; continue; }
+      const near = Math.max(0, (k - 0.45) / 0.55); ctx.beginPath(); ctx.arc(LANE_X[l], y, 38, 0, TAU); ctx.fillStyle = `rgba(0,242,234,${0.06 + near * 0.3})`; ctx.fill();
+      ctx.font = (30 + 14 * k) + 'px system-ui'; ctx.save(); ctx.translate(LANE_X[l], y); ctx.rotate(Math.sin(songTime * 6 + n.id) * 0.15); ctx.fillText(glyph, 0, 0); ctx.restore();
     }
     if (n.lane === 2 && !n.hit) { ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.setLineDash([4, 6]); ctx.beginPath(); ctx.moveTo(LANE_X[0] + 34, y); ctx.lineTo(LANE_X[1] - 34, y); ctx.stroke(); ctx.setLineDash([]); }
   }
@@ -350,8 +368,8 @@ function drawInner() {
     const k = (songTime - e.at) / 0.7; if (k > 1) continue;
     const xs = e.lane === 2 ? LANE_X : [LANE_X[e.lane]];
     for (const x of xs) {
-      ctx.globalAlpha = 1 - k; ctx.font = '700 ' + (26 + k * 24) + 'px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      if (e.kind === 'miss') ctx.fillText('💢', x + 40, hy - 90 - k * 40);
+      ctx.globalAlpha = 1 - k; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      if (e.kind === 'miss') { ctx.font = '30px system-ui'; ctx.fillText('💢', x + 40, hy - 90 - k * 40); }
       else { const n = e.kind === 'perfect' ? 8 : 4; for (let i = 0; i < n; i++) { const a = i * TAU / n + k * 2; ctx.font = (12 + (i % 3) * 6) + 'px system-ui'; ctx.fillText(['🎵', '✨', '🎶'][i % 3], x + Math.cos(a) * (36 + k * 90), hy - 20 - k * 110 + Math.sin(a) * 22); } }
       ctx.globalAlpha = 1;
     }
@@ -360,32 +378,39 @@ function drawInner() {
   drawHearts(dt);
   ctx.textBaseline = 'alphabetic';
 }
-function record(x, y, sc, spin, cracked = false) { // a vinyl, drawn in code
-  ctx.save(); ctx.translate(x, y); ctx.rotate(spin); ctx.scale(sc, sc);
-  ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fillStyle = '#15121f'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#2a1740'; ctx.stroke();
-  for (const r of [12, 18, 24]) { ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1; ctx.stroke(); }
-  ctx.beginPath(); ctx.arc(0, 0, 10, 0, TAU); ctx.fillStyle = cracked ? '#777' : '#ff5c8a'; ctx.fill(); ctx.beginPath(); ctx.arc(0, 0, 2.5, 0, TAU); ctx.fillStyle = '#15121f'; ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-6, -12); ctx.lineTo(6, -12); ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2; ctx.stroke();
-  if (cracked) { ctx.beginPath(); ctx.moveTo(-8, -28); ctx.lineTo(2, -6); ctx.lineTo(-4, 4); ctx.lineTo(9, 26); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
-  ctx.restore();
-}
-function drawStage(dt) { // booth, the two platters glow, the two hands, the crowd in front
-  const hy = H * HIT_Y;
-  const bImg = IMG[BOOTH]; if (bImg && bImg.complete && bImg.naturalWidth) { const bw = W * 1.12, bh = bw * bImg.naturalHeight / bImg.naturalWidth; ctx.drawImage(bImg, W / 2 - bw / 2, hy - bh * 0.5, bw, bh); }
-  LANE_X.forEach((x, i) => {
-    pulse[i] += dt; hand[i] += dt; const k = Math.min(1, pulse[i] / 0.45);
-    ctx.beginPath(); ctx.arc(x, hy, 40, 0, TAU); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1.5; ctx.stroke();
-    if (k < 1) { ctx.beginPath(); ctx.arc(x, hy, 40 * (1 + k * 0.55), 0, TAU); ctx.fillStyle = `rgba(0,242,234,${0.4 * (1 - k)})`; ctx.fill(); }
-    const hImg = IMG[HAND[i]]; if (hImg && hImg.complete && hImg.naturalWidth) { const slam = Math.max(0, 1 - hand[i] / 0.18), hh = 118, hw = hh * hImg.naturalWidth / hImg.naturalHeight; ctx.save(); ctx.globalAlpha = 0.95; ctx.drawImage(hImg, x - hw / 2, hy - hh * 0.62 + 30 * slam - Math.sin(performance.now() / 600 + i) * 4, hw, hh); ctx.restore(); }
+function drawLights(dt) { // club lighting: a kick-synced pulse, two sweeping beams, a flash on every hit
+  const beatPos = mode === 'playing' ? ((songTime % BEAT) + BEAT) % BEAT / BEAT : (performance.now() / 1000 % BEAT) / BEAT;
+  const kick = Math.pow(1 - beatPos, 3);
+  const hue = ((((mode === 'playing' ? Math.floor(songTime / (BEAT * 4)) : Math.floor(performance.now() / 3000)) % 4) + 4) % 4);
+  const cols = [['0,242,234', '255,92,138'], ['255,92,138', '181,140,255'], ['181,140,255', '255,224,82'], ['255,224,82', '0,242,234']][hue];
+  ctx.fillStyle = `rgba(${cols[0]},${0.05 + kick * 0.09})`; ctx.fillRect(0, 0, W, H);
+  const t = performance.now() / 1000;
+  [[0, 1], [W, -1]].forEach(([ox, dir], i) => { // beams from the top corners sweeping across
+    const ang = Math.PI / 2 + dir * (0.55 + Math.sin(t * 0.9 + i * 2) * 0.45);
+    const g = ctx.createLinearGradient(ox, 0, ox + Math.cos(ang) * H, Math.sin(ang) * H);
+    g.addColorStop(0, `rgba(${cols[i]},${0.22 + kick * 0.15})`); g.addColorStop(1, `rgba(${cols[i]},0)`);
+    ctx.save(); ctx.translate(ox, -10); ctx.rotate(ang - Math.PI / 2); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(14, 0); ctx.lineTo(90, H * 1.3); ctx.lineTo(-90, H * 1.3); ctx.closePath(); ctx.fill(); ctx.restore();
   });
-  ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = '700 10px system-ui'; ctx.textAlign = 'center'; ctx.fillText('LEFT EYE', LANE_X[0], hy + 62); ctx.fillText('RIGHT EYE', LANE_X[1], hy + 62);
-  // the crowd: five people along the bottom edge
-  const n = crowd.length; crowd.forEach((c, i) => {
+  if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * 0.28})`; ctx.fillRect(0, 0, W, H); flash = Math.max(0, flash - dt * 4); }
+}
+function drawCrowd() { // five people behind the booth, upper half showing
+  const n = crowd.length, feet = BOOTH_TOP() + 22 * BOOTH_S + 46;
+  crowd.forEach((c, i) => {
     if (c.state !== 'wait' && songTime > c.until) c.state = 'wait';
     const x = (i + 0.5) * W / n, t = performance.now() / 1000;
-    const bob = c.state === 'good' ? Math.abs(Math.sin(t * 9 + c.bob)) * 16 : c.state === 'bad' ? Math.sin(t * 14 + c.bob) * 2 : Math.sin(t * 2.2 + c.bob) * 3;
+    const bob = c.state === 'good' ? Math.abs(Math.sin(t * 9 + c.bob)) * 18 : c.state === 'bad' ? Math.sin(t * 14 + c.bob) * 2 : Math.sin(t * 2.2 + c.bob) * 3;
     const rot = c.state === 'good' ? Math.sin(t * 9 + c.bob) * 0.08 : 0;
-    sprite(PEOPLE[c.who][c.state], x, H * 1.03 - bob, { scale: 0.8, rot });
+    sprite(PEOPLE[c.who][c.state], x, feet - bob, { scale: 0.86, rot });
+  });
+}
+function drawBooth(dt) { // the booth at the very bottom, a little see-through; hands and targets on the platters
+  const hy = H * HIT_Y, bImg = IMG[BOOTH];
+  if (bImg && bImg.complete && bImg.naturalWidth) { ctx.save(); ctx.globalAlpha = 0.86; ctx.drawImage(bImg, (W - BOOTH_W) / 2, BOOTH_TOP(), BOOTH_W, 900 * BOOTH_S); ctx.restore(); }
+  LANE_X.forEach((x, i) => {
+    pulse[i] += dt; hand[i] += dt; const k = Math.min(1, pulse[i] / 0.45);
+    ctx.beginPath(); ctx.arc(x, hy, 38, 0, TAU); ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.5; ctx.stroke();
+    if (k < 1) { ctx.beginPath(); ctx.arc(x, hy, 38 * (1 + k * 0.55), 0, TAU); ctx.fillStyle = `rgba(0,242,234,${0.45 * (1 - k)})`; ctx.fill(); }
+    const hImg = IMG[HAND[i]]; if (hImg && hImg.complete && hImg.naturalWidth) { const slam = Math.max(0, 1 - hand[i] / 0.18), hh = 104, hw = hh * hImg.naturalWidth / hImg.naturalHeight; ctx.save(); ctx.globalAlpha = 0.96; ctx.drawImage(hImg, x - hw / 2, hy - hh * 0.55 + 14 * slam - Math.sin(performance.now() / 600 + i) * 3, hw, hh); ctx.restore(); }
   });
 }
 function heartPath(cx, cy, r) { // simple heart outline, r ≈ half width
