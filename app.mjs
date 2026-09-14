@@ -53,7 +53,11 @@ function checkSize() { // mobile browsers settle their viewport after load; keep
 }
 
 // ---------- audio (synthesized) ----------
-function ensureAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+function ensureAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); loadStingers(); }
+// result-page stingers: shared with the salon game so the whole set ends on the same note
+const STINGER_SRC = { great: 'assets/audio/ending-great.mp3' }, stingerBuf = {};
+function loadStingers() { for (const [k, src] of Object.entries(STINGER_SRC)) { if (stingerBuf[k]) continue; stingerBuf[k] = 'loading'; fetch(src).then((r) => r.arrayBuffer()).then((b) => audioCtx.decodeAudioData(b)).then((buf) => { stingerBuf[k] = buf; }).catch(() => { delete stingerBuf[k]; }); } }
+function stinger(k, gain = 1, delay = 0) { const buf = stingerBuf[k]; if (!buf || buf === 'loading') return false; const s = audioCtx.createBufferSource(); s.buffer = buf; const g = audioCtx.createGain(); g.gain.value = gain; s.connect(g).connect(audioCtx.destination); s.start(audioCtx.currentTime + delay); return true; }
 function tone(freq, t, dur, type = 'sine', gain = 0.2, slide = 0) {
   const o = audioCtx.createOscillator(), g = audioCtx.createGain();
   o.type = type; o.frequency.setValueAtTime(freq, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + dur);
@@ -216,7 +220,7 @@ function endRound() {
   const total = notes.length, hits = stats.perfect + stats.good, pct = total ? Math.round(hits / total * 100) : 0;
   $('rPct').textContent = pct + '%'; $('rLine').textContent = hits + ' of ' + total + ' beats landed';
   $('resultTitle').textContent = pct >= 90 ? 'The club is yours.' : pct >= 70 ? 'Crowd is moving.' : pct >= 40 ? 'Warming up.' : 'They want the aux back.';
-  showcase = []; crowdFinal = pct >= 50 ? 'good' : 'bad'; if (crowdFinal === 'good') roar(); else scratch();
+  showcase = []; crowdFinal = pct >= 50 ? 'good' : 'bad'; if (crowdFinal === 'good') { if (!stinger('great', 1, 0.15)) roar(); } else scratch();
   show('rbtns', false); clearTimeout(endRound.t); endRound.t = setTimeout(() => show('rbtns'), 5000);
   resultAt = performance.now();
   confetti = crowdFinal !== 'good' ? [] : Array.from({ length: 90 }, () => ({ x: Math.random() * W, y: -Math.random() * H, vx: (Math.random() - .5) * 40, vy: 80 + Math.random() * 120, r: 4 + Math.random() * 5, c: ['#ff5c8a', '#ffb3c8', '#b58cff', '#ffe052', '#fff7fb'][Math.floor(Math.random() * 5)], a: Math.random() * TAU }));
