@@ -23,7 +23,7 @@ const PEOPLE = Array.from({ length: 10 }, (_, i) => { const n = String(i + 1).pa
 const BOOTH = '../assets/booth/booth.png', HAND = ['../assets/booth/hand-left.png', '../assets/booth/hand-right.png'];
 const NOTE = ['../assets/stickers/note-pink.png', '../assets/stickers/note-cyan.png', '../assets/stickers/note-record.png'];
 const GUIDE = [{ img: '../assets/guide/tilt-right.png', want: 0, text: 'Tilt left' }, { img: '../assets/guide/nod.png', want: 2, text: 'Nod' }, { img: '../assets/guide/tilt-left.png', want: 1, text: 'Tilt right' }]; // images lean the way you see yourself in the mirror
-let guideStep = 0, guideDoneAt = 0;
+let guideDone = [false, false, false], guideDoneAt = 0, guideStep = 0;
 const STICKER = { glasses: '../assets/stickers/sunglasses.png', chain: '../assets/stickers/chain.png', frustrated: '../assets/stickers/frustrated.png' };
 const IMG = {};
 function loadImg(src) { if (IMG[src]) return IMG[src]; const i = new Image(); i.src = src; IMG[src] = i; return i; }
@@ -183,9 +183,9 @@ async function startCamera() {
 function stopCamera() { if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; video.srcObject = null; } }
 
 function showHowto() {
-  ensureAudio(); setMode('howto'); clearTimeout(beginCountdown.t); guideStep = 0; guideDoneAt = 0; baseRoll = null; basePitch = null; baseSamples = 0;
+  ensureAudio(); setMode('howto'); clearTimeout(beginCountdown.t); guideStep = 0; guideDone = [false, false, false]; guideDoneAt = 0; baseRoll = null; basePitch = null; baseSamples = 0;
   $('howtoCta').textContent = practice ? 'Starting…' : 'Blink to start';
-  if (practice) { let k = 0; const iv = setInterval(() => { guideStep = ++k; guideDoneAt = performance.now(); if (k >= GUIDE.length) { clearInterval(iv); beginCountdown.t = setTimeout(startCountdown, 500); } }, 900); }
+  if (practice) { let k = 0; const iv = setInterval(() => { guideDone[k] = true; guideStep = ++k; guideDoneAt = performance.now(); if (k >= GUIDE.length) { clearInterval(iv); beginCountdown.t = setTimeout(startCountdown, 500); } }, 900); }
   // camera: the first detected blink starts the round, which also proves tracking is live
 }
 function beginCountdown() { showHowto(); }
@@ -281,7 +281,7 @@ function handleHead(nose, L, R, chin) {
   if (tilt !== -1 && headArmed) { headArmed = false; onHead(tilt, now); }
 }
 function onHead(lane, now) {
-  if (mode === 'howto' && !practice) { if (guideStep < GUIDE.length && GUIDE[guideStep].want === lane) { guideStep++; guideDoneAt = performance.now(); sfx('count'); if (guideStep === GUIDE.length) setTimeout(() => { if (mode === 'howto') startNow(); }, 500); } return; }
+  if (mode === 'howto' && !practice) { const i = GUIDE.findIndex((g) => g.want === lane); if (i >= 0 && !guideDone[i]) { guideDone[i] = true; guideDoneAt = performance.now(); sfx('count'); guideStep = GUIDE.findIndex((g, k) => !guideDone[k]); if (guideStep < 0) { guideStep = GUIDE.length; setTimeout(() => { if (mode === 'howto') startNow(); }, 500); } } return; }
   if (mode !== 'playing') return;
   shootHearts(lane, 3); if (lane === 2) { pulse = [0, 0]; hand = [0, 0]; } else { pulse[lane] = 0; hand[lane] = 0; }
   if (DEBUG) dlog(`head ${['L','R','nod'][lane]} t=${songTime.toFixed(2)} next=${nearest(songTime)}`);
@@ -372,7 +372,7 @@ function drawInner() {
     img(g.img, W / 2, gy, 210 + pop * 30, { rot: Math.sin(t * 2) * 0.02 });
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = '900 26px system-ui'; ctx.fillStyle = '#fff'; ctx.fillText(guideStep >= GUIDE.length ? 'Let\'s go!' : g.text, W / 2, gy + 130);
-    GUIDE.forEach((gg, i) => { const x = W / 2 + (i - 1) * 44, done = i < guideStep; ctx.beginPath(); ctx.arc(x, gy + 168, 9, 0, TAU); ctx.fillStyle = done ? '#00f2ea' : i === guideStep ? '#fff' : 'rgba(255,255,255,.3)'; ctx.fill(); if (done) { ctx.strokeStyle = '#0b0b16'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 4, gy + 168); ctx.lineTo(x - 1, gy + 171); ctx.lineTo(x + 4, gy + 165); ctx.stroke(); } });
+    GUIDE.forEach((gg, i) => { const x = W / 2 + (i - 1) * 44, done = guideDone[i]; ctx.beginPath(); ctx.arc(x, gy + 168, 9, 0, TAU); ctx.fillStyle = done ? '#00f2ea' : i === guideStep ? '#fff' : 'rgba(255,255,255,.3)'; ctx.fill(); if (done) { ctx.strokeStyle = '#0b0b16'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 4, gy + 168); ctx.lineTo(x - 1, gy + 171); ctx.lineTo(x + 4, gy + 165); ctx.stroke(); } });
     if (g.want !== 2) { const dir = g.want === 0 ? -1 : 1; ctx.font = '900 34px system-ui'; ctx.fillStyle = '#00f2ea'; ctx.fillText(dir < 0 ? '←' : '→', W / 2 + dir * 150, gy - 40); }
     else { ctx.font = '900 34px system-ui'; ctx.fillStyle = '#00f2ea'; ctx.fillText('↓', W / 2, gy - 140); }
     ctx.textBaseline = 'alphabetic';
