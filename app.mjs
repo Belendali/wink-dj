@@ -26,7 +26,7 @@ const STICKER = { glasses: 'assets/stickers/sunglasses.png', chain: 'assets/stic
 const IMG = {};
 function loadImg(src) { if (IMG[src]) return IMG[src]; const i = new Image(); i.src = src; IMG[src] = i; return i; }
 PEOPLE.forEach((p) => Object.values(p).forEach(loadImg)); loadImg(BOOTH); HAND.forEach(loadImg); NOTE.forEach(loadImg); Object.values(STICKER).forEach(loadImg);
-function img(src, x, y, w, opts = {}) { const i = loadImg(src); if (!ready(src)) return false; const h = w * i.naturalHeight / i.naturalWidth; ctx.save(); ctx.translate(x, y); ctx.rotate(opts.rot || 0); ctx.globalAlpha = opts.alpha ?? 1; ctx.drawImage(i, -w / 2, -h * (opts.ay ?? 0.5), w, h); ctx.restore(); return true; }
+function img(src, x, y, w, opts = {}) { const i = loadImg(src); if (!ready(src)) return false; const h = w * i.naturalHeight / i.naturalWidth; ctx.save(); ctx.translate(x, y); ctx.rotate(opts.rot || 0); if (opts.flipY) ctx.scale(1, -1); ctx.globalAlpha = opts.alpha ?? 1; ctx.drawImage(i, -w / 2, -h * (opts.ay ?? 0.5), w, h); ctx.restore(); return true; }
 const ready = (src) => { const i = IMG[src]; return i && i.complete && i.naturalWidth > 0; };
 const PERSON_H = 150;
 function sprite(src, x, baseY, opts = {}) {
@@ -399,9 +399,7 @@ function drawFaceSticker() { // the verdict on the player's own face: shades + c
   const tilt = eyePos.L && eyePos.R ? Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x) : 0;
   const faceW = face ? Math.hypot(face.right.x - face.left.x, face.right.y - face.left.y) : eyeDist * 2.4;
   if (crowdFinal === 'good') {
-    img(STICKER.glasses, eyeMid.x, eyeMid.y, eyeDist * 2.7, { rot: tilt });                           // glasses span both eyes
-    const chin = face ? face.chin : { x: eyeMid.x, y: eyeMid.y + eyeDist * 1.9 };
-    img(STICKER.chain, chin.x, chin.y + faceW * 0.12, faceW * 1.7, { ay: 0 });                          // chain hangs from under the chin
+    img(STICKER.glasses, eyeMid.x, eyeMid.y, eyeDist * 2.7, { rot: tilt, flipY: true });              // glasses span both eyes (image is upside down, so flip)
   } else {
     const top = face ? face.top : { x: eyeMid.x, y: eyeMid.y - eyeDist * 1.2 };
     const t = performance.now() / 1000;
