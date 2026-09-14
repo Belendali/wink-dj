@@ -3,7 +3,7 @@ const $ = (id) => document.getElementById(id);
 const video = $('cam'), canvas = $('scene'), ctx = canvas.getContext('2d');
 const W = 390; let H = 693, DPR = 1;
 const BPM = 80, BEAT = 60 / BPM, SONG = 15, LEAD = 2.0;
-const PERFECT = 0.28, GOOD = 0.6; // generous: a wink is slower than a tap
+const PERFECT = 0.32, GOOD = 0.7; // generous: a head move is slower than a tap
 const BOOTH_W = W * 1.12, BOOTH_S = BOOTH_W / 900; // booth image is 900 px wide; platters at (238,677) and (662,677), table bottom at 830
 const BOOTH_TOP = () => H * 0.67 - 575 * BOOTH_S; // table top at 63% so the platters (the interaction) sit inside TikTok's core zone (y ≤ 533/694)
 const LANE_X = [(W - BOOTH_W) / 2 + 238 * BOOTH_S, (W - BOOTH_W) / 2 + 662 * BOOTH_S]; let HIT_Y = 0.88; // judge line: a whole character at the hit moment stays inside the visual zone (y ≤ 545/694)
@@ -154,7 +154,7 @@ $('practice').onclick = () => { ensureAudio(); practice = true; $('phone').class
 $('startRound').onclick = () => beginCountdown();
 $('bothMode').onclick = () => { bothMode = true; beginCountdown(); };
 $('replay').onclick = () => showHowto();
-$('home').onclick = () => { clearTimeout(beginCountdown.t); clearTimeout(endRound.t); stopCamera(); setMode('idle'); };
+$('home').onclick = () => { clearTimeout(beginCountdown.t); clearTimeout(endRound.t); clearInterval(showHowto.iv); stopCamera(); setMode('idle'); };
 
 async function startSetup() {
   setMode('setup'); show('calib', false); show('startRound', false); show('bothMode', false);
@@ -183,7 +183,8 @@ async function startCamera() {
 function stopCamera() { if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; video.srcObject = null; } }
 
 function showHowto() {
-  ensureAudio(); setMode('howto'); clearTimeout(beginCountdown.t); guideStep = 0; guideDone = [false, false, false]; guideDoneAt = 0; baseRoll = null; basePitch = null; baseSamples = 0;
+  ensureAudio(); setMode('howto'); clearTimeout(beginCountdown.t); guideStep = 0; guideDone = [false, false, false]; guideDoneAt = performance.now(); baseRoll = null; basePitch = null; baseSamples = 0;
+  if (!practice) { let k = 0; clearInterval(showHowto.iv); showHowto.iv = setInterval(() => { guideDone[k] = true; guideStep = ++k; guideDoneAt = performance.now(); sfx('count'); if (k >= GUIDE.length) { clearInterval(showHowto.iv); setTimeout(() => { if (mode === 'howto') startNow(); }, 400); } }, 1000); }
   $('howtoCta').textContent = practice ? 'Starting…' : 'Blink to start';
   if (practice) { let k = 0; const iv = setInterval(() => { guideDone[k] = true; guideStep = ++k; guideDoneAt = performance.now(); if (k >= GUIDE.length) { clearInterval(iv); beginCountdown.t = setTimeout(startCountdown, 500); } }, 900); }
   // camera: the first detected blink starts the round, which also proves tracking is live
@@ -260,13 +261,13 @@ function updateHud() { $('score').textContent = stats.score; $('combo').textCont
 let smRoll = 0, smPitch = 0, baseRoll = null, basePitch = null, baseSamples = 0, headArmed = true, nodArmed = true, faceAt = 0;
 let eyePos = { L: null, R: null }, face = null, hearts = [];
 let pulse = [0, 0], hand = [0, 0], flash = 0, riff = 0, crowd = [];
-const TILT = 0.15, TILT_REARM = 0.06, NOD = 0.12; // ~8.5° to trigger, back within ~3.5° to re-arm
+const TILT = 0.11, TILT_REARM = 0.05, NOD = 0.09; // ~6° to trigger, back within ~3° to re-arm
 function handleHead(nose, L, R, chin) {
   faceAt = performance.now();
   const midY = (L.y + R.y) / 2, ed = Math.hypot(R.x - L.x, R.y - L.y) || 1;
   const roll = Math.atan2(R.y - L.y, R.x - L.x);  // eye line angle: negative = head tilted toward screen-left
   const pitch = (nose.y - midY) / ed;             // grows when the head drops into a nod
-  smRoll += (roll - smRoll) * 0.6; smPitch += (pitch - smPitch) * 0.6;
+  smRoll += (roll - smRoll) * 0.7; smPitch += (pitch - smPitch) * 0.7;
   if (baseRoll === null || baseSamples < 30) { // learn your resting pose in the first half second (phone held crooked, head naturally tilted)
     baseRoll = baseRoll === null ? smRoll : baseRoll + (smRoll - baseRoll) * 0.15; basePitch = basePitch === null ? smPitch : basePitch + (smPitch - basePitch) * 0.15; baseSamples++;
   } else if (Math.abs(smRoll - baseRoll) < TILT_REARM && smPitch - basePitch < NOD * 0.5) { baseRoll += (smRoll - baseRoll) * 0.02; basePitch += (smPitch - basePitch) * 0.02; } // drift only while resting
@@ -281,7 +282,7 @@ function handleHead(nose, L, R, chin) {
   if (tilt !== -1 && headArmed) { headArmed = false; onHead(tilt, now); }
 }
 function onHead(lane, now) {
-  if (mode === 'howto' && !practice) { const i = GUIDE.findIndex((g) => g.want === lane); if (i >= 0 && !guideDone[i]) { guideDone[i] = true; guideDoneAt = performance.now(); sfx('count'); guideStep = GUIDE.findIndex((g, k) => !guideDone[k]); if (guideStep < 0) { guideStep = GUIDE.length; setTimeout(() => { if (mode === 'howto') startNow(); }, 500); } } return; }
+  if (mode === 'howto') { shootHearts(lane, 2); return; } // the guide just plays; a move during it only sparks a little feedback
   if (mode !== 'playing') return;
   shootHearts(lane, 3); if (lane === 2) { pulse = [0, 0]; hand = [0, 0]; } else { pulse[lane] = 0; hand[lane] = 0; }
   if (DEBUG) dlog(`head ${['L','R','nod'][lane]} t=${songTime.toFixed(2)} next=${nearest(songTime)}`);
