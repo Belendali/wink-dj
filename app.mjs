@@ -5,7 +5,7 @@ const W = 390; let H = 693, DPR = 1;
 const BPM = 80, BEAT = 60 / BPM, SONG = 15, LEAD = 2.0;
 const PERFECT = 0.22, GOOD = 0.5; // generous: a wink is slower than a tap
 const BOOTH_W = W * 1.12, BOOTH_S = BOOTH_W / 900; // booth image is 900 px wide; platters at (238,677) and (662,677), table bottom at 830
-const BOOTH_TOP = () => H * 0.995 - 830 * BOOTH_S;
+const BOOTH_TOP = () => H * 0.63 - 575 * BOOTH_S; // table top at 63% so the platters (the interaction) sit inside TikTok's core zone (y ≤ 533/694)
 const LANE_X = [(W - BOOTH_W) / 2 + 238 * BOOTH_S, (W - BOOTH_W) / 2 + 662 * BOOTH_S]; let HIT_Y = 0.88; // judge line: a whole character at the hit moment stays inside the visual zone (y ≤ 545/694)
 
 let mode = 'idle'; // idle | setup | countdown | playing | result
@@ -337,7 +337,7 @@ function drawInner() {
     { // the crowd gives the verdict: dancing or sulking, big and close
       const n = crowd.length, t = (performance.now() - resultAt) / 1000;
       drawLights(dt);
-      crowd.forEach((c, i) => { const x = (i + 0.5) * W / n, good = crowdFinal === 'good'; const bob = good ? Math.abs(Math.sin(t * 8 + c.bob)) * 22 : Math.sin(t * 1.5 + c.bob) * 3; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, H * 0.9 - bob + (1 - k) * 140, { scale: 1.0, rot: good ? Math.sin(t * 8 + c.bob) * 0.1 : 0 }); });
+      crowd.forEach((c, i) => { const x = (i + 0.5) * W / n, good = crowdFinal === 'good'; const bob = good ? Math.abs(Math.sin(t * 8 + c.bob)) * 22 : Math.sin(t * 1.5 + c.bob) * 3; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, BOOTH_TOP() + 22 * BOOTH_S + 60 - bob + (1 - k) * 140, { scale: 0.9, rot: good ? Math.sin(t * 8 + c.bob) * 0.1 : 0 }); });
       drawBooth(dt);
     }
     const dtc = (performance.now() - confettiAt) / 1000;
@@ -400,11 +400,13 @@ function drawCrowd() { // five people behind the booth, upper half showing
     const x = (i + 0.5) * W / n, t = performance.now() / 1000;
     const bob = c.state === 'good' ? Math.abs(Math.sin(t * 9 + c.bob)) * 18 : c.state === 'bad' ? Math.sin(t * 14 + c.bob) * 2 : Math.sin(t * 2.2 + c.bob) * 3;
     const rot = c.state === 'good' ? Math.sin(t * 9 + c.bob) * 0.08 : 0;
-    sprite(PEOPLE[c.who][c.state], x, feet - bob, { scale: 0.86, rot });
+    sprite(PEOPLE[c.who][c.state], x, feet - bob, { scale: 0.78, rot });
   });
 }
-function drawBooth(dt) { // the booth at the very bottom, a little see-through; hands and targets on the platters
+function drawBooth(dt) { // the booth, a little see-through; hands and targets on the platters; a dance floor below
   const hy = H * HIT_Y, bImg = IMG[BOOTH];
+  const floorTop = BOOTH_TOP() + 800 * BOOTH_S; const fg = ctx.createLinearGradient(0, floorTop, 0, H); fg.addColorStop(0, 'rgba(11,11,22,.0)'); fg.addColorStop(0.3, 'rgba(11,11,22,.55)'); fg.addColorStop(1, 'rgba(11,11,22,.85)'); ctx.fillStyle = fg; ctx.fillRect(0, floorTop, W, H - floorTop);
+  const beat = mode === 'playing' ? Math.pow(1 - (((songTime % BEAT) + BEAT) % BEAT) / BEAT, 3) : 0; for (let i = 0; i < 6; i++) { const y = floorTop + 18 + i * 22; ctx.strokeStyle = `rgba(0,242,234,${0.05 + beat * 0.12 - i * 0.008})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(W / 2 - (i + 1) * 45, y); ctx.lineTo(W / 2 + (i + 1) * 45, y); ctx.stroke(); }
   if (bImg && bImg.complete && bImg.naturalWidth) { ctx.save(); ctx.globalAlpha = 0.86; ctx.drawImage(bImg, (W - BOOTH_W) / 2, BOOTH_TOP(), BOOTH_W, 900 * BOOTH_S); ctx.restore(); }
   LANE_X.forEach((x, i) => {
     pulse[i] += dt; hand[i] += dt; const k = Math.min(1, pulse[i] / 0.45);
