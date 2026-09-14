@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wink DJ — Asset library</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%2300f2ea'/%3E%3Ctext x='20' y='29' text-anchor='middle' font-size='26'%3E%F0%9F%8E%A7%3C/text%3E%3C/svg%3E" />
+<style>
+  :root { --bg:#0b0b16; --card:#f5f7ff; --ink:#14122a; --dim:#6b6a8a; --line:rgba(20,18,42,.12); --accent:#00f2ea; --ghost:rgba(245,247,255,.1); --muted:rgba(245,247,255,.5); --muted2:rgba(245,247,255,.72); --navline:rgba(245,247,255,.18); --chk1:#e4e6f0; --chk2:#f0f1f8; }
+
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--card); font-family: -apple-system, "Helvetica Neue", Inter, system-ui, sans-serif; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 48px 24px 96px; }
+  .k { font-size: 11px; letter-spacing: .28em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-size: 40px; margin: 10px 0 8px; letter-spacing: -.01em; }
+  .lede { color: var(--muted2); margin: 0 0 22px; max-width: 640px; line-height: 1.5; }
+  .btn { display:inline-block; background:var(--accent); color:var(--ink); font-weight:700; text-decoration:none; padding: 12px 20px; border-radius: 12px; margin: 0 8px 8px 0; }
+  .btn.ghost { background: var(--ghost); color: var(--card); font-weight: 500; }
+  nav { display:flex; gap:10px; flex-wrap:wrap; margin: 26px 0 40px; }
+  nav a { color: var(--muted2); text-decoration:none; font-size:14px; padding:6px 12px; border:1px solid var(--navline); border-radius:999px; }
+  section { margin-top: 44px; }
+  h2 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted2); font-size: 14px; margin: 0 0 16px; line-height: 1.5; max-width: 720px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .grid.tight { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .card { background: var(--card); color: var(--ink); border-radius: 18px; padding: 16px; }
+  .card .pv { border-radius: 12px; overflow:hidden; background: repeating-conic-gradient(var(--chk1) 0 25%, var(--chk2) 0 50%) 0 0/20px 20px; aspect-ratio: 1; display:flex; align-items:center; justify-content:center; }
+  .card .pv.dark { background: repeating-conic-gradient(#2a2a3a 0 25%, #333346 0 50%) 0 0/20px 20px; }
+  .card .pv img { max-width: 100%; max-height: 100%; display:block; }
+  .card b { display:block; margin: 12px 0 2px; font-size: 15px; }
+  .card p { margin: 0; font-size: 13px; color: var(--dim); line-height: 1.5; }
+  .card .row { display:flex; gap:8px; margin-top: 12px; flex-wrap: wrap; }
+  .card .row a { font-size: 13px; color: var(--ink); text-decoration:none; border:1px solid var(--line); border-radius: 999px; padding: 6px 12px; }
+  .strip { display:grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .strip.two { grid-template-columns: repeat(2, 1fr); }
+  .strip figure { margin:0; text-align:center; }
+  .strip figcaption { font-size: 11px; color: var(--dim); margin-top: 4px; letter-spacing: .08em; text-transform: uppercase; }
+  .swatches { display:grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 10px; }
+  .sw { border-radius: 14px; padding: 14px 12px; color: #111; font-size: 12px; font-family: ui-monospace, Menlo, monospace; }
+  .sw.dark { color: #fffdf0; }
+  table { width:100%; border-collapse: collapse; background: var(--card); color: var(--ink); border-radius: 18px; overflow:hidden; font-size: 14px; }
+  th, td { text-align:left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.5; }
+  th { width: 180px; color: var(--dim); font-weight: 600; }
+  tr:last-child td, tr:last-child th { border-bottom: 0; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; }
+  .drawn { background: var(--card); color: var(--ink); border-radius: 18px; padding: 18px; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 18px; }
+  .drawn div { font-size: 13px; color: var(--dim); line-height: 1.5; }
+  .drawn b { display:block; color: var(--ink); margin-bottom: 4px; font-size: 14px; }
+  .drawn svg { width: 100%; height: 70px; display:block; margin-bottom: 8px; border-radius: 10px; }
+  footer { margin-top: 56px; font-size: 13px; color: var(--muted); line-height: 1.6; }
+  footer a { color: var(--muted2); }
+  @media (max-width: 600px) { th { width: 110px; } h1 { font-size: 32px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="k">Team handoff / Kit 04</div>
+  <h1>Asset library.</h1>
+  <p class="lede">Everything Wink DJ and Head DJ draw with. One booth, ten club-goers in three states, note and face stickers, the head-tilt guide, synthesized sound, a palette, and the rules behind both inputs.</p>
+  <a class="btn" href="./wink-dj-assets.zip" download>Download kit (zip) ↓</a><a class="btn ghost" href="../">Blink DJ ↗</a><a class="btn ghost" href="../head/">Head DJ ↗</a><a class="btn ghost" href="https://github.com/Belendali/wink-dj">GitHub ↗</a>
+  <nav><a href="#booth">Booth</a><a href="#notes">Notes</a><a href="#result">Result stickers</a><a href="#crowd">Crowd</a><a href="#guide">Head guide</a><a href="#drawn">Drawn in code</a><a href="#sound">Sound</a><a href="#palette">Palette</a><a href="#rules">Rules &amp; input</a></nav>
+
+  <section id="booth">
+    <h2>Booth</h2>
+    <p class="sub">The DJ table is one image, the hands are two. The table is drawn at 112% of the canvas width so the platters land on the two lanes; the hands hang from the top edge and slam down on a hit.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="pv dark"><img src="../assets/booth/booth.png" alt="booth.png" loading="lazy" /></div>
+        <b>booth.png</b>
+        <p>900 × 900. Table top sits at 63% of the height so both platters, the interaction points, stay inside TikTok’s core zone. Platter centres at (238, 677) and (662, 677) in the source.</p>
+        <div class="row"><a href="../assets/booth/booth.png" download>PNG ↓</a></div>
+      </div>
+
+      <div class="card">
+        <div class="pv dark"><img src="../assets/booth/hand-left.png" alt="hand-left.png" loading="lazy" /></div>
+        <b>hand-left.png</b>
+        <p>500 × 500. Flipped to reach down from the top of the frame. Slams for 0.25 s on a left-lane hit, then eases back.</p>
+        <div class="row"><a href="../assets/booth/hand-left.png" download>PNG ↓</a></div>
+      </div>
+
+      <div class="card">
+        <div class="pv dark"><img src="../assets/booth/hand-right.png" alt="hand-right.png" loading="lazy" /></div>
+        <b>hand-right.png</b>
+        <p>500 × 500. Mirror of the left hand for the right lane.</p>
+        <div class="row"><a href="../assets/booth/hand-right.png" download>PNG ↓</a></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="notes">
+    <h2>Note stickers</h2>
+    <p class="sub">The falling notes. One is picked at random per beat; they drop onto the platter and pop on a hit.</p>
+    <div class="grid tight">
+      <div class="card">
+        <div class="pv dark"><img src="../assets/stickers/note-pink.png" alt="note-pink.png" loading="lazy" /></div>
+        <b>note-pink.png</b>
+        <p>256 × 256. In use.</p>
+        <div class="row"><a href="../assets/stickers/note-pink.png" download>PNG ↓</a></div>
+      </div>
+
+      <div class="card">
+        <div class="pv dark"><img src="../assets/stickers/note-cyan.png" alt="note-cyan.png" loading="lazy" /></div>
+        <b>note-cyan.png</b>
+        <p>256 × 256. In use.</p>
+        <div class="row"><a href="../assets/stickers/note-cyan.png" download>PNG ↓</a></div>
+      </div>
+
+      <div class="card">
+        <div class="pv dark"><img src="../assets/stickers/note-record.png" alt="note-record.png" loading="lazy" /></div>
+        <b>note-record.png</b>
+        <p>256 × 256. In use.</p>
+        <div class="row"><a href="../assets/stickers/note-record.png" download>PNG ↓</a></div>
+      </div>
+
+      <div class="card">
+        <div class="pv dark"><img src="../assets/stickers/note-clef.png" alt="note-clef.png" loading="lazy" /></div>
+        <b>note-clef.png</b>
+        <p>256 × 256. Spare, not in the current build.</p>
+        <div class="row"><a href="../assets/stickers/note-clef.png" download>PNG ↓</a></div>
+      </div>
+
+      <div class="card">
+        <div class="pv dark"><img src="../assets/stickers/note-purple.png" alt="note-purple.png" loading="lazy" /></div>
+        <b>note-purple.png</b>
+        <p>256 × 256. Spare, not in the current build.</p>
+        <div class="row"><a href="../assets/stickers/note-purple.png" download>PNG ↓</a></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="result">
+    <h2>Result stickers</h2>
+    <p class="sub">Placed on the player’s own face on the result screen, using the tracked eye line and chin.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="pv dark"><img src="../assets/stickers/sunglasses.png" alt="sunglasses.png" loading="lazy" /></div>
+        <b>sunglasses.png</b>
+        <p>Good round (50% or better). Scaled to the eye distance, rotated with the head, flipped vertically in code because the source points down.</p>
+        <div class="row"><a href="../assets/stickers/sunglasses.png" download>PNG ↓</a></div>
+      </div>
+
+      <div class="card">
+        <div class="pv dark"><img src="../assets/stickers/frustrated.png" alt="frustrated.png" loading="lazy" /></div>
+        <b>frustrated.png</b>
+        <p>480 × 320. Bad round. Sits above the head as a scribble cloud.</p>
+        <div class="row"><a href="../assets/stickers/frustrated.png" download>PNG ↓</a></div>
+      </div>
+
+      <div class="card">
+        <div class="pv dark"><img src="../assets/stickers/chain.png" alt="chain.png" loading="lazy" /></div>
+        <b>chain.png</b>
+        <p>640 × 640. Retired: the gold chain was cut from the good-round look. Kept in the kit.</p>
+        <div class="row"><a href="../assets/stickers/chain.png" download>PNG ↓</a></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="crowd">
+    <h2>Crowd</h2>
+    <p class="sub">Ten club-goers, three states each. <b>wait</b> bobs on the beat, <b>good</b> jumps up on a hit, <b>bad</b> on a miss. Five are dealt per round and stand under the booth behind a frosted band; the whole crowd rocks left–right with the beat and reacts together at the end.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="strip"><figure><div class="pv dark"><img src="../assets/people/p01-wait.png" alt="p01 wait" loading="lazy" /></div><figcaption>wait</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p01-good.png" alt="p01 good" loading="lazy" /></div><figcaption>good</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p01-bad.png" alt="p01 bad" loading="lazy" /></div><figcaption>bad</figcaption></figure></div>
+        <b>p01</b>
+        <p>560 × 560, transparent. Five are dealt per round.</p>
+        <div class="row"><a href="../assets/people/p01-wait.png" download>wait ↓</a><a href="../assets/people/p01-good.png" download>good ↓</a><a href="../assets/people/p01-bad.png" download>bad ↓</a></div>
+      </div>
+      <div class="card">
+        <div class="strip"><figure><div class="pv dark"><img src="../assets/people/p02-wait.png" alt="p02 wait" loading="lazy" /></div><figcaption>wait</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p02-good.png" alt="p02 good" loading="lazy" /></div><figcaption>good</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p02-bad.png" alt="p02 bad" loading="lazy" /></div><figcaption>bad</figcaption></figure></div>
+        <b>p02</b>
+        <p>560 × 560, transparent. Five are dealt per round.</p>
+        <div class="row"><a href="../assets/people/p02-wait.png" download>wait ↓</a><a href="../assets/people/p02-good.png" download>good ↓</a><a href="../assets/people/p02-bad.png" download>bad ↓</a></div>
+      </div>
+      <div class="card">
+        <div class="strip"><figure><div class="pv dark"><img src="../assets/people/p03-wait.png" alt="p03 wait" loading="lazy" /></div><figcaption>wait</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p03-good.png" alt="p03 good" loading="lazy" /></div><figcaption>good</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p03-bad.png" alt="p03 bad" loading="lazy" /></div><figcaption>bad</figcaption></figure></div>
+        <b>p03</b>
+        <p>560 × 560, transparent. Five are dealt per round.</p>
+        <div class="row"><a href="../assets/people/p03-wait.png" download>wait ↓</a><a href="../assets/people/p03-good.png" download>good ↓</a><a href="../assets/people/p03-bad.png" download>bad ↓</a></div>
+      </div>
+      <div class="card">
+        <div class="strip"><figure><div class="pv dark"><img src="../assets/people/p04-wait.png" alt="p04 wait" loading="lazy" /></div><figcaption>wait</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p04-good.png" alt="p04 good" loading="lazy" /></div><figcaption>good</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p04-bad.png" alt="p04 bad" loading="lazy" /></div><figcaption>bad</figcaption></figure></div>
+        <b>p04</b>
+        <p>560 × 560, transparent. Five are dealt per round.</p>
+        <div class="row"><a href="../assets/people/p04-wait.png" download>wait ↓</a><a href="../assets/people/p04-good.png" download>good ↓</a><a href="../assets/people/p04-bad.png" download>bad ↓</a></div>
+      </div>
+      <div class="card">
+        <div class="strip"><figure><div class="pv dark"><img src="../assets/people/p05-wait.png" alt="p05 wait" loading="lazy" /></div><figcaption>wait</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p05-good.png" alt="p05 good" loading="lazy" /></div><figcaption>good</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p05-bad.png" alt="p05 bad" loading="lazy" /></div><figcaption>bad</figcaption></figure></div>
+        <b>p05</b>
+        <p>560 × 560, transparent. Five are dealt per round.</p>
+        <div class="row"><a href="../assets/people/p05-wait.png" download>wait ↓</a><a href="../assets/people/p05-good.png" download>good ↓</a><a href="../assets/people/p05-bad.png" download>bad ↓</a></div>
+      </div>
+      <div class="card">
+        <div class="strip"><figure><div class="pv dark"><img src="../assets/people/p06-wait.png" alt="p06 wait" loading="lazy" /></div><figcaption>wait</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p06-good.png" alt="p06 good" loading="lazy" /></div><figcaption>good</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p06-bad.png" alt="p06 bad" loading="lazy" /></div><figcaption>bad</figcaption></figure></div>
+        <b>p06</b>
+        <p>560 × 560, transparent. Five are dealt per round.</p>
+        <div class="row"><a href="../assets/people/p06-wait.png" download>wait ↓</a><a href="../assets/people/p06-good.png" download>good ↓</a><a href="../assets/people/p06-bad.png" download>bad ↓</a></div>
+      </div>
+      <div class="card">
+        <div class="strip"><figure><div class="pv dark"><img src="../assets/people/p07-wait.png" alt="p07 wait" loading="lazy" /></div><figcaption>wait</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p07-good.png" alt="p07 good" loading="lazy" /></div><figcaption>good</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p07-bad.png" alt="p07 bad" loading="lazy" /></div><figcaption>bad</figcaption></figure></div>
+        <b>p07</b>
+        <p>560 × 560, transparent. Five are dealt per round.</p>
+        <div class="row"><a href="../assets/people/p07-wait.png" download>wait ↓</a><a href="../assets/people/p07-good.png" download>good ↓</a><a href="../assets/people/p07-bad.png" download>bad ↓</a></div>
+      </div>
+      <div class="card">
+        <div class="strip"><figure><div class="pv dark"><img src="../assets/people/p08-wait.png" alt="p08 wait" loading="lazy" /></div><figcaption>wait</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p08-good.png" alt="p08 good" loading="lazy" /></div><figcaption>good</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p08-bad.png" alt="p08 bad" loading="lazy" /></div><figcaption>bad</figcaption></figure></div>
+        <b>p08</b>
+        <p>560 × 560, transparent. Five are dealt per round.</p>
+        <div class="row"><a href="../assets/people/p08-wait.png" download>wait ↓</a><a href="../assets/people/p08-good.png" download>good ↓</a><a href="../assets/people/p08-bad.png" download>bad ↓</a></div>
+      </div>
+      <div class="card">
+        <div class="strip"><figure><div class="pv dark"><img src="../assets/people/p09-wait.png" alt="p09 wait" loading="lazy" /></div><figcaption>wait</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p09-good.png" alt="p09 good" loading="lazy" /></div><figcaption>good</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p09-bad.png" alt="p09 bad" loading="lazy" /></div><figcaption>bad</figcaption></figure></div>
+        <b>p09</b>
+        <p>560 × 560, transparent. Five are dealt per round.</p>
+        <div class="row"><a href="../assets/people/p09-wait.png" download>wait ↓</a><a href="../assets/people/p09-good.png" download>good ↓</a><a href="../assets/people/p09-bad.png" download>bad ↓</a></div>
+      </div>
+      <div class="card">
+        <div class="strip"><figure><div class="pv dark"><img src="../assets/people/p10-wait.png" alt="p10 wait" loading="lazy" /></div><figcaption>wait</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p10-good.png" alt="p10 good" loading="lazy" /></div><figcaption>good</figcaption></figure><figure><div class="pv dark"><img src="../assets/people/p10-bad.png" alt="p10 bad" loading="lazy" /></div><figcaption>bad</figcaption></figure></div>
+        <b>p10</b>
+        <p>560 × 560, transparent. Five are dealt per round.</p>
+        <div class="row"><a href="../assets/people/p10-wait.png" download>wait ↓</a><a href="../assets/people/p10-good.png" download>good ↓</a><a href="../assets/people/p10-bad.png" download>bad ↓</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="guide">
+    <h2>Head DJ guide</h2>
+    <p class="sub">The head-tilt variant opens with a three-second warm-up: one picture per second, then the beat starts whether or not you followed along.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="pv dark"><img src="../assets/guide/tilt-right.png" alt="tilt-right.png" loading="lazy" /></div>
+        <b>tilt-right.png</b>
+        <p>Shown first as "Tilt left" (the picture is mirrored, like the camera).</p>
+        <div class="row"><a href="../assets/guide/tilt-right.png" download>PNG ↓</a></div>
+      </div>
+
+      <div class="card">
+        <div class="pv dark"><img src="../assets/guide/nod.png" alt="nod.png" loading="lazy" /></div>
+        <b>nod.png</b>
+        <p>Shown second as "Nod". A nod hits both platters at once.</p>
+        <div class="row"><a href="../assets/guide/nod.png" download>PNG ↓</a></div>
+      </div>
+
+      <div class="card">
+        <div class="pv dark"><img src="../assets/guide/tilt-left.png" alt="tilt-left.png" loading="lazy" /></div>
+        <b>tilt-left.png</b>
+        <p>Shown third as "Tilt right".</p>
+        <div class="row"><a href="../assets/guide/tilt-left.png" download>PNG ↓</a></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="drawn">
+    <h2>Drawn in code</h2>
+    <div class="drawn">
+      <div><svg viewBox="0 0 200 70"><rect width="200" height="70" fill="#0b0b16"/><polygon points="20,0 60,70 30,70" fill="#00f2ea" opacity=".35"/><polygon points="120,0 160,70 130,70" fill="#ff5c8a" opacity=".35"/><polygon points="180,0 200,40 200,70 170,70" fill="#b58cff" opacity=".3"/></svg><b>Club lights</b>A kick-synced pulse on the background, two sweeping beams in the accent colours, and a white flash on every hit.</div>
+      <div><svg viewBox="0 0 200 70"><rect width="200" height="70" fill="#0b0b16"/><rect x="0" y="30" width="200" height="40" fill="rgba(245,247,255,.18)"/><circle cx="50" cy="50" r="12" fill="#f5f7ff" opacity=".5"/><circle cx="100" cy="50" r="12" fill="#f5f7ff" opacity=".5"/><circle cx="150" cy="50" r="12" fill="#f5f7ff" opacity=".5"/></svg><b>Frosted band</b>A blurred, semi-transparent strip behind the crowd so they read against the camera feed without a full background.</div>
+      <div><svg viewBox="0 0 200 70" fill="none" stroke="#00f2ea" stroke-width="3" style="background:#0b0b16"><circle cx="60" cy="40" r="18"/><circle cx="60" cy="40" r="28" opacity=".4"/><circle cx="140" cy="40" r="18" stroke="#ff5c8a"/><circle cx="140" cy="40" r="28" opacity=".4" stroke="#ff5c8a"/></svg><b>Platter rings</b>Judge rings on the two platters with an approach disc per note and a pulse ring after each hit, the same system as Wink Wink.</div>
+      <div><svg viewBox="0 0 200 70" style="background:#0b0b16"><g fill="#ffe052"><rect x="20" y="10" width="8" height="12" transform="rotate(20 24 16)"/><rect x="60" y="30" width="8" height="12" fill="#ff5c8a" transform="rotate(-30 64 36)"/><rect x="100" y="12" width="8" height="12" fill="#00f2ea"/><rect x="140" y="34" width="8" height="12" fill="#b58cff" transform="rotate(45 144 40)"/></g></svg><b>Result</b>Confetti on a good round, a big percentage, a verdict line, the crowd’s final reaction, and the face stickers above.</div>
+    </div>
+  </section>
+
+  <section id="sound">
+    <h2>Sound</h2>
+    <p class="sub">All synthesized with WebAudio except the ending stinger.</p>
+    <table>
+      <tr><th>Groove</th><td>80 bpm, 15-second set. Kick, snare, hats, bass and a chord loop (C, Dm, Em, Dm). Scheduled ahead so it stays locked to the chart.</td></tr>
+      <tr><th>Hit sounds</th><td>Each hit plays the next note of a 12-note riff (C5 up to C6 and back), so a clean run sounds like a melody. Misses scratch the record and draw a low boo.</td></tr>
+      <tr><th>Crowd</th><td>Cheer on a good hit, groan on a miss.</td></tr>
+      <tr><th>Stinger</th><td><a href="../assets/audio/ending-great.mp3" download>ending-great.mp3</a> on 50% or better, shared with the salon and jump-rope games. Below that, the record scratch and a boo.</td></tr>
+    </table>
+  </section>
+
+  <section id="palette">
+    <h2>Palette</h2>
+    <p class="sub">Near-black club with TikTok’s cyan and pink as the two lane colours.</p>
+    <div class="swatches"><div class="sw dark" style="background:#0b0b16">background<br>#0b0b16</div><div class="sw dark" style="background:#14122a">ink<br>#14122a</div><div class="sw" style="background:#00f2ea">cyan · left lane<br>#00f2ea</div><div class="sw" style="background:#9df7f3">cyan 2<br>#9df7f3</div><div class="sw" style="background:#ff5c8a">pink · right lane<br>#ff5c8a</div><div class="sw" style="background:#b58cff">lavender · beams<br>#b58cff</div><div class="sw" style="background:#f5f7ff">card<br>#f5f7ff</div></div>
+  </section>
+
+  <section id="rules">
+    <h2>Rules &amp; input</h2>
+    <p class="sub">Two inputs, one chart.</p>
+    <table>
+      <tr><th>Round</th><td>15 seconds at 80 bpm. Notes fall onto the left and right platters; hit them on the beat. Every eighth beat is a drop that wants both at once.</td></tr>
+      <tr><th>Blink DJ</th><td>Left eye for the left platter, right eye for the right, both eyes for the drop. Same eye tracking as Wink Wink: blendshape difference over 0.18, 70 ms single-vs-both window, 40 ms lag compensation. Perfect ±280 ms, Good ±600 ms.</td></tr>
+      <tr><th>Head DJ</th><td>Tilt your head left or right for the platters, nod for the drop. Roll is the angle of the eye line, pitch is the nose against the eye midpoint. A tilt of about 6° triggers and re-arms once you are back within 3°; the resting pose is calibrated over the first 30 frames and drifts slowly. Perfect ±320 ms, Good ±700 ms.</td></tr>
+      <tr><th>Chart</th><td>Strict left–right alternation on every beat, drop every eighth beat. First note lands about 2.7 s after GO.</td></tr>
+      <tr><th>Safe zones</th><td>390 × 694 canvas. Platters and HUD inside the core zone (x 65–325, y 82–533); the crowd below the booth stays inside the visual zone. <code>?zones</code> shows the overlay, <code>?debug</code> logs detection.</td></tr>
+      <tr><th>Flow</th><td>Camera card → "Blink to start" (blink) or three-second warm-up (head) → count-in → 15 s → result with face stickers.</td></tr>
+    </table>
+  </section>
+
+  <footer>Wink DJ · face-tracked rhythm game · <a href="../">blink</a> · <a href="../head/">head</a> · <a href="https://github.com/Belendali/wink-dj">source</a>. All art generated for this project; all audio synthesized or recorded for it.</footer>
+</div>
+</body>
+</html>
