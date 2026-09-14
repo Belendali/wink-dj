@@ -258,25 +258,26 @@ function judge(text) { const j = $('judge'); j.textContent = text; j.classList.a
 function updateHud() { $('score').textContent = stats.score; $('combo').textContent = stats.combo; }
 
 // head-pose state machine: turn left/right = left/right deck, a nod = the drop. Sunglasses stay on.
-let smYaw = 0, smPitch = 0, basePitch = null, baseSamples = 0, headArmed = true, headPendingAt = 0, headSide = 0, nodArmed = true, faceAt = 0;
+let smRoll = 0, smPitch = 0, basePitch = null, baseSamples = 0, headArmed = true, nodArmed = true, faceAt = 0;
 let eyePos = { L: null, R: null }, face = null, hearts = [];
 let pulse = [0, 0], hand = [0, 0], flash = 0, riff = 0, crowd = [];
 function handleHead(nose, L, R, chin) {
   faceAt = performance.now();
-  const midX = (L.x + R.x) / 2, midY = (L.y + R.y) / 2, ed = Math.hypot(R.x - L.x, R.y - L.y) || 1;
-  const yaw = (nose.x - midX) / ed;               // + = turned toward screen-right (mirrored view)
+  const midY = (L.y + R.y) / 2, ed = Math.hypot(R.x - L.x, R.y - L.y) || 1;
+  const roll = Math.atan2(R.y - L.y, R.x - L.x);  // eye line angle: negative = head tilted toward screen-left, positive = screen-right
   const pitch = (nose.y - midY) / ed;             // grows when the head drops into a nod
-  smYaw += (yaw - smYaw) * 0.5; smPitch += (pitch - smPitch) * 0.5;
+  smRoll += (roll - smRoll) * 0.5; smPitch += (pitch - smPitch) * 0.5;
   if (basePitch === null || baseSamples < 40) { basePitch = basePitch === null ? smPitch : basePitch + (smPitch - basePitch) * 0.1; baseSamples++; }
-  else basePitch += (smPitch - basePitch) * 0.01; // slow drift so posture changes don't break it
-  const turn = smYaw < -0.22 ? 0 : smYaw > 0.22 ? 1 : -1;
+  else basePitch += (smPitch - basePitch) * 0.01;
+  const TILT = 0.2; // ~11°
+  const tilt = smRoll < -TILT ? 0 : smRoll > TILT ? 1 : -1;
   const nod = smPitch - basePitch > 0.16;
-  $('eyeL').classList.toggle('on', turn === 0 || nod); $('eyeR').classList.toggle('on', turn === 1 || nod);
+  $('eyeL').classList.toggle('on', tilt === 0 || nod); $('eyeR').classList.toggle('on', tilt === 1 || nod);
   const now = performance.now();
-  if (turn === -1) headArmed = true;              // back to centre re-arms the turn
+  if (Math.abs(smRoll) < TILT * 0.5) headArmed = true;   // back near level re-arms the tilt
   if (!nod) nodArmed = true;
   if (nod && nodArmed) { nodArmed = false; onHead(2, now); return; }
-  if (turn !== -1 && headArmed) { headArmed = false; onHead(turn, now); }
+  if (tilt !== -1 && headArmed) { headArmed = false; onHead(tilt, now); }
 }
 function onHead(lane, now) {
   if (mode === 'howto' && !practice) { startNow(); return; }
