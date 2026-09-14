@@ -353,7 +353,7 @@ function drawInner() {
     { // the crowd gives the verdict: dancing or sulking, big and close
       const n = crowd.length, t = (performance.now() - resultAt) / 1000;
       drawLights(dt); drawBooth(dt); drawFaceSticker();
-      crowd.forEach((c, i) => { const x = 19 + (i + 0.5) * (W - 38) / n, good = crowdFinal === 'good', dir = i % 2 ? -1 : 1, rock = Math.sin(t / BEAT * Math.PI); const bob = good ? Math.abs(rock) * 20 : 2; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, H * 1.01 - bob + (1 - k) * 140, { scale: 0.85, rot: good ? rock * 0.32 * dir : 0 }); });
+      crowd.forEach((c, i) => { const x = 19 + (i + 0.5) * (W - 38) / n, good = crowdFinal === 'good', dir = i % 2 ? -1 : 1, rock = Math.sin(t / BEAT * Math.PI); const bob = good ? Math.abs(rock) * 20 : 2; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, H * 1.01 - bob + (1 - k) * 140, { scale: 0.85, rot: good ? rock * 0.22 * dir : 0 }); });
     }
     const dtc = (performance.now() - confettiAt) / 1000;
     for (const c of confetti) { const y = c.y + c.vy * dtc, x = c.x + c.vx * dtc + Math.sin(dtc * 3 + c.a) * 12; if (y > H + 10) continue; ctx.save(); ctx.translate(x, y); ctx.rotate(c.a + dtc * 4); ctx.fillStyle = c.c; ctx.fillRect(-c.r / 2, -c.r, c.r, c.r * 2); ctx.restore(); }
@@ -428,7 +428,7 @@ function drawCrowd() { // five people below the booth, rocking left-right on the
   crowd.forEach((c, i) => {
     if (c.state !== 'wait' && songTime > c.until) c.state = 'wait';
     const x = 19 + (i + 0.5) * (W - 38) / n, dir = i % 2 ? -1 : 1;
-    const amp = c.state === 'good' ? 0.3 : c.state === 'bad' ? 0.03 : 0.14;
+    const amp = c.state === 'good' ? 0.2 : c.state === 'bad' ? 0.03 : 0.11;
     const rot = rock * amp * dir, bob = c.state === 'good' ? Math.abs(rock) * 16 : Math.abs(rock) * 5;
     sprite(PEOPLE[c.who][c.state], x, feet - bob, { scale: 0.72, rot });
   });
