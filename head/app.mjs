@@ -21,7 +21,7 @@ let audioCtx = null, schedulerId = 0, nextBeat = 0, beatIndex = 0;
 // ---------- people (one walk image + reaction images per character) ----------
 const PEOPLE = Array.from({ length: 10 }, (_, i) => { const n = String(i + 1).padStart(2, '0'); return { wait: `../assets/people/p${n}-wait.png`, good: `../assets/people/p${n}-good.png`, bad: `../assets/people/p${n}-bad.png` }; });
 const BOOTH = '../assets/booth/booth.png', HAND = ['../assets/booth/hand-left.png', '../assets/booth/hand-right.png'];
-const NOTE = ['../assets/stickers/note-pink.png', '../assets/stickers/note-cyan.png', '../assets/stickers/note-record.png'];
+const NOTE = ['../assets/stickers/note-pink.png', '../assets/stickers/note-cyan.png', '../assets/stickers/note-record.png', '../assets/stickers/mic.png'];
 const GUIDE = [{ want: 0, text: 'Tilt left' }, { want: 2, text: 'Nod' }, { want: 1, text: 'Tilt right' }]; // images lean the way you see yourself in the mirror
 let guideDone = [false, false, false], guideDoneAt = 0, guideStep = 0;
 const STICKER = { glasses: '../assets/stickers/sunglasses.png', headphones: '../assets/stickers/headphones.png', chain: '../assets/stickers/chain.png', frustrated: '../assets/stickers/frustrated.png' };
@@ -107,6 +107,37 @@ function scheduleBeats() {
 }
 // hits are musical: every hit plays the next step of a riff, so a streak becomes a melody
 const RIFF = [523, 659, 784, 880, 784, 659, 1047, 880, 784, 659, 587, 523];
+// ---------- voice ----------
+// Not speech recognition: a jump in loudness. The threshold rides on the room floor and on the recent average, so the groove coming out of the speaker does not count, a shout does.
+let micAn = null, micBuf = null, micLevel = 0, micAvg = 0, micFloor = 0.02, micArmed = true, micQuietAt = 0, micAt = 0;
+function startMic() {
+  try { const tracks = stream && stream.getAudioTracks(); if (!tracks || !tracks.length) return; ensureAudio(); const src = audioCtx.createMediaStreamSource(new MediaStream(tracks)); micAn = audioCtx.createAnalyser(); micAn.fftSize = 1024; micAn.smoothingTimeConstant = 0; src.connect(micAn); micBuf = new Float32Array(micAn.fftSize); micFloor = 0.02; micAvg = 0; micArmed = true; } catch (e) { micAn = null; }
+}
+function updateMic() {
+  if (!micAn || practice) return; micAn.getFloatTimeDomainData(micBuf); let sum = 0; for (let i = 0; i < micBuf.length; i++) sum += micBuf[i] * micBuf[i];
+  const level = Math.sqrt(sum / micBuf.length), now = performance.now(); micLevel = level;
+  micFloor += (level - micFloor) * (level < micFloor ? 0.15 : 0.004);   // the room: follows drops fast, rises slowly
+  micAvg += (level - micAvg) * 0.06;                                     // the last half second, music included
+  const thr = Math.max(0.012, micFloor * 3, micAvg * 2.4);
+  if (level < thr * 0.55) { if (!micQuietAt) micQuietAt = now; if (now - micQuietAt > 110) micArmed = true; } else micQuietAt = 0;
+  if (micArmed && level > thr && now - micAt > 260) { micArmed = false; micAt = now; onVoice(now); }
+  if (DEBUG && mode === 'playing') dlog(`mic ${level.toFixed(3)} thr ${thr.toFixed(3)}`);
+}
+function onVoice(now) {
+  if (mode === 'howto') { shootHearts(2, 2); return; }
+  if (mode !== 'playing') return;
+  if (DEBUG) dlog(`voice t=${songTime.toFixed(2)} next=${nearest(songTime)}`);
+  fire(3, songTime - 0.05);
+}
+// a synthesized "hey" / "yo": two formant filters over a falling sawtooth
+function shout(word, delay = 0) {
+  if (!audioCtx) return; const t = audioCtx.currentTime + delay, o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = 'sawtooth';
+  const [f0, f1, dur] = word === 'YO!' ? [190, 140, 0.32] : [230, 170, 0.26]; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  const forms = word === 'YO!' ? [[420, 6], [900, 8]] : [[700, 6], [1300, 8]];
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  forms.forEach(([fq, q]) => { const bp = audioCtx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fq; bp.Q.value = q; o.connect(bp).connect(g); });
+  g.connect(audioCtx.destination); o.start(t); o.stop(t + dur + 0.05);
+}
 function hitSound(lane, big) {
   if (!audioCtx) return; const t = audioCtx.currentTime, f = RIFF[riff++ % RIFF.length];
   if (lane === 2) { [f, f * 1.25, f * 1.5].forEach((x, i) => tone(x, t + i * 0.03, 0.5, 'sawtooth', 0.09)); tone(f / 4, t, 0.6, 'square', 0.12); } // the drop: a chord + sub
@@ -152,6 +183,7 @@ function makeChart() {
   let lane = rnd() < 0.5 ? 0 : 1, same = 0; const dropAt = rnd() < 0.5 ? 6 : 7;   // which side opens and where the drop sits change every round
   for (let b = 4; b < beats - 1; b++) {
     const t = b * BEAT;
+    if ((b - 4) % 8 === 4) { list.push({ t, lane: 3, word: Math.floor((b - 4) / 8) % 2 ? 'YO!' : 'HEY!' }); same = 0; continue; } // the shout: say it into the mic
     if (b % 8 === dropAt) { list.push({ t, lane: 2 }); same = 0; continue; }   // the drop: nod
     if (b < 12 && b % 2) continue;                                              // ease in: every other beat at first
     if (b >= 12 && rnd() < 0.12) continue;                                      // a breath now and then
@@ -197,22 +229,22 @@ async function loadLandmarker() {
 }
 async function startCamera() {
   if (stream) return;
-  stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 } }, audio: false });
-  video.srcObject = stream; await video.play();
+  stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 } }, audio: { echoCancellation: true, noiseSuppression: true } }).catch(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 } }, audio: false }));
+  video.srcObject = new MediaStream(stream.getVideoTracks()); await video.play(); startMic();
 }
 function stopCamera() { if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; video.srcObject = null; } }
 
 function showHowto() {
   ensureAudio(); setMode('howto'); clearTimeout(beginCountdown.t); guideStep = 0; guideDone = [false, false, false]; guideDoneAt = performance.now();
   const lbl = $('howtoLbl'), gi = $('guideImg'); gi.src = '../assets/guide/head.webp?r=' + Date.now(); // restart the animation from frame one
-  // the animation is 3 s: tilt left peaks ~0.6 s, tilt right ~1.6 s, nod ~2.2 s, hair flip ~2.7 s; labels change as each move begins
-  const plan = [[0, 'Tilt left'], [1050, 'Tilt right'], [2000, 'Nod'], [2600, 'Let\'s go!']];
+  // the animation is 3.5 s: tilt left peaks ~0.6 s, tilt right ~1.5 s, then a nod with a shout and a hair flip ~2.5 s; labels change as each move begins
+  const plan = [[0, 'Tilt left'], [1000, 'Tilt right'], [2050, 'Nod & say hey!'], [3050, 'Let\'s go!']];
   lbl.textContent = plan[0][1]; $('howtoCta').textContent = practice ? 'Starting…' : 'Follow along';
   clearTimeout(showHowto.t1); clearTimeout(showHowto.t2); clearTimeout(showHowto.t3); clearTimeout(showHowto.t4);
   showHowto.t1 = setTimeout(() => { lbl.textContent = plan[1][1]; guideDone[0] = true; guideStep = 1; if (!practice) sfx('count'); }, plan[1][0]);
   showHowto.t2 = setTimeout(() => { lbl.textContent = plan[2][1]; guideDone[1] = true; guideStep = 2; if (!practice) sfx('count'); }, plan[2][0]);
   showHowto.t3 = setTimeout(() => { lbl.textContent = plan[3][1]; guideDone[2] = true; guideStep = 3; if (!practice) sfx('count'); }, plan[3][0]);
-  showHowto.t4 = setTimeout(() => { if (mode !== 'howto') return; if (practice) startCountdown(); else startNow(); }, 3000);
+  showHowto.t4 = setTimeout(() => { if (mode !== 'howto') return; if (practice) startCountdown(); else startNow(); }, 3500);
 }
 function beginCountdown() { showHowto(); }
 function startCountdown() {
@@ -257,14 +289,15 @@ function fire(lane, at = songTime) {
   let best = null, bestD = GOOD * 1.5 + 1e-9;
   for (const n of notes) {
     if (n.hit) continue;
-    const win = n.id < 2 ? GOOD * 1.5 : GOOD; // warm-up: the first two are forgiving
-    if (!bothMode && !(n.lane === lane || (n.lane === 2 && lane === 2))) continue;
+    const win = n.id < 2 ? GOOD * 1.5 : n.lane === 3 ? GOOD * 1.3 : GOOD; // warm-up: the first two are forgiving; a shout is slower than a tilt
+    if (n.lane === 3 || lane === 3) { if (n.lane !== lane) continue; }
+    else if (!bothMode && !(n.lane === lane || (n.lane === 2 && lane === 2))) continue;
     if (!bothMode && n.lane === 2 && lane !== 2) continue;
     const d = Math.min(Math.abs(n.t - t), Math.abs(n.t - t2)); if (d <= win && d < bestD) { bestD = d; best = n; }
   }
   let lenient = false;
   if (!best) { // second pass: a wink read as "both" (or the other way round) still counts, capped at Good
-    for (const n of notes) { if (n.hit) continue; const win = n.id < 2 ? GOOD * 1.5 : GOOD; const d = Math.min(Math.abs(n.t - t), Math.abs(n.t - t2)); if (d <= win && d < bestD) { bestD = d; best = n; lenient = true; } }
+    for (const n of notes) { if (n.hit || n.lane === 3 || lane === 3) continue; const win = n.id < 2 ? GOOD * 1.5 : GOOD; const d = Math.min(Math.abs(n.t - t), Math.abs(n.t - t2)); if (d <= win && d < bestD) { bestD = d; best = n; lenient = true; } }
   }
   if (!best) { if (DEBUG) dlog('no note in window'); return; }
   const grade = !lenient && bestD <= PERFECT ? 'perfect' : 'good';
@@ -272,8 +305,8 @@ function fire(lane, at = songTime) {
   if (DEBUG) dlog(`hit ${grade} note#${best.id} d=${(t - best.t).toFixed(3)}`);
   stats[grade]++; stats.combo++; stats.maxCombo = Math.max(stats.maxCombo, stats.combo); stats.score += grade === 'perfect' ? 100 : 60;
   effects.push({ kind: grade, lane: best.lane, at: t });
-  judge(grade === 'perfect' ? 'PERFECT' : 'GOOD'); sfx(grade); shootHearts(best.lane, grade === 'perfect' ? 8 : 4, true);
-  crowdReact('good', grade === 'perfect' ? 1.3 : 0.9); hitSound(best.lane, grade === 'perfect'); flash = grade === 'perfect' ? 1 : 0.6; if (best.lane === 2) hand = [0, 0]; else hand[best.lane] = 0;
+  judge(best.lane === 3 ? best.word : grade === 'perfect' ? 'PERFECT' : 'GOOD'); sfx(grade); shootHearts(best.lane === 3 ? 2 : best.lane, grade === 'perfect' ? 8 : 4, true);
+  crowdReact('good', grade === 'perfect' ? 1.3 : 0.9); if (best.lane === 3) shout(best.word, 0.08); else hitSound(best.lane, grade === 'perfect'); if (best.lane === 2) shout('YO!', 0.05); flash = grade === 'perfect' ? 1 : 0.6; if (best.lane >= 2) hand = [0, 0]; else hand[best.lane] = 0;
   if (grade === 'perfect' && (!faceBest || Math.random() < 0.4)) faceBest = grabFace();
   updateHud();
 }
@@ -286,29 +319,32 @@ function updateHud() { $('score').textContent = stats.score; $('combo').textCont
 let smRoll = 0, smPitch = 0, baseRoll = null, basePitch = null, baseSamples = 0, headArmed = true, nodArmed = true, faceAt = 0;
 let eyePos = { L: null, R: null }, face = null, hearts = [];
 let pulse = [0, 0], hand = [0, 0], flash = 0, riff = 0, crowd = [];
-const TILT = 0.085, TILT_REARM = 0.045, NOD = 0.05; // ~5° to trigger, back within ~2.5° to re-arm; a nod of ~10° clears NOD
-const FLICK_MS = 170, FLICK_T = 0.055, FLICK_N = 0.03; // a quick move triggers early: this much change within FLICK_MS, once past a third of the threshold
-let hist = [], headAt = 0, nodAt = 0;
+const TILT = 0.085, TILT_REARM = 0.045, NOD = 0.04, NOD_FLICK = 0.026; // ~5° of tilt; a nod moves the nose about 4% of the face height
+const FLICK_MS = 170, FLICK_T = 0.055, RETURN = 0.06;                 // a quick move triggers early; coming back 3.4° from the peak re-arms the same side
+let hist = [], headAt = 0, nodAt = 0, peakR = 0, smYaw = 0, baseYaw = null;
 function handleHead(nose, L, R, chin) {
   faceAt = performance.now();
-  const midY = (L.y + R.y) / 2, ed = Math.hypot(R.x - L.x, R.y - L.y) || 1;
+  const midX = (L.x + R.x) / 2, midY = (L.y + R.y) / 2, ed = Math.hypot(R.x - L.x, R.y - L.y) || 1, faceH = Math.max(1, chin.y - midY);
   const roll = Math.atan2(R.y - L.y, R.x - L.x);  // eye line angle: negative = head tilted toward screen-left
-  const pitch = (nose.y - midY) / ed;             // grows when the head drops into a nod
-  smRoll += (roll - smRoll) * 0.75; smPitch += (pitch - smPitch) * 0.75;
-  if (baseRoll === null || baseSamples < 30) { // learn your resting pose while the face is found, before the guide starts (phone held crooked, head naturally tilted)
-    baseRoll = baseRoll === null ? smRoll : baseRoll + (smRoll - baseRoll) * 0.15; basePitch = basePitch === null ? smPitch : basePitch + (smPitch - basePitch) * 0.15; baseSamples++;
-  } else if (Math.abs(smRoll - baseRoll) < TILT_REARM && Math.abs(smPitch - basePitch) < NOD * 0.4) { baseRoll += (smRoll - baseRoll) * 0.02; basePitch += (smPitch - basePitch) * 0.02; } // drift only while resting
-  const now = performance.now(), r = smRoll - baseRoll, p = smPitch - basePitch;
+  const pitch = (nose.y - midY) / faceH;          // nose drop over face height: both are vertical spans, so turning the head does not fake a nod
+  const yaw = (nose.x - midX) / ed;               // turning proxy: nods are ignored while the head is turned
+  smRoll += (roll - smRoll) * 0.75; smPitch += (pitch - smPitch) * 0.75; smYaw += (yaw - smYaw) * 0.75;
+  if (baseRoll === null || baseSamples < 30) { // learn your resting pose while the face is found, before the guide starts
+    baseRoll = baseRoll === null ? smRoll : baseRoll + (smRoll - baseRoll) * 0.15; basePitch = basePitch === null ? smPitch : basePitch + (smPitch - basePitch) * 0.15; baseYaw = baseYaw === null ? smYaw : baseYaw + (smYaw - baseYaw) * 0.15; baseSamples++;
+  } else if (Math.abs(smRoll - baseRoll) < TILT_REARM && Math.abs(smPitch - basePitch) < NOD * 0.4) { baseRoll += (smRoll - baseRoll) * 0.02; basePitch += (smPitch - basePitch) * 0.02; baseYaw += (smYaw - baseYaw) * 0.02; } // drift only while resting
+  const now = performance.now(), r = smRoll - baseRoll, p = smPitch - basePitch, yw = smYaw - baseYaw;
   hist.push({ t: now, r, p }); while (hist.length > 1 && now - hist[0].t > FLICK_MS) hist.shift();
   const dr = r - hist[0].r, dp = p - hist[0].p;
   const tilt = r < -TILT || (dr < -FLICK_T && r < -TILT * 0.35) ? 0 : r > TILT || (dr > FLICK_T && r > TILT * 0.35) ? 1 : -1;
-  const nod = p > NOD || (dp > FLICK_N && p > NOD * 0.4);
+  const nod = Math.abs(yw) < 0.3 && (p > NOD || (dp > NOD_FLICK && p > NOD * 0.4));
   $('eyeL').classList.toggle('on', tilt === 0 || nod); $('eyeR').classList.toggle('on', tilt === 1 || nod);
-  if (DEBUG && mode === 'playing') dlog(`roll ${(r * 57.3).toFixed(1)}° dr ${(dr * 57.3).toFixed(1)} pitch ${p.toFixed(3)} dp ${dp.toFixed(3)} ${headArmed ? '' : 'held'}`);
-  if (Math.abs(r) < TILT * 0.6) headArmed = true;   // back most of the way to centre re-arms; left-right-left passes through centre anyway
+  if (DEBUG && mode === 'playing') dlog(`roll ${(r * 57.3).toFixed(1)}° dr ${(dr * 57.3).toFixed(1)} pitch ${p.toFixed(3)} dp ${dp.toFixed(3)} yaw ${yw.toFixed(2)} ${headArmed ? '' : 'held'}`);
+  if (headArmed) peakR = 0; else { if (Math.abs(r) > Math.abs(peakR)) peakR = r; if (Math.abs(r) < TILT * 0.6 || Math.abs(peakR) - Math.abs(r) > RETURN) headArmed = true; } // back near centre, or clearly on the way back, re-arms
   if (p < NOD * 0.5) nodArmed = true;
-  if (nod && nodArmed && !(tilt !== -1 && Math.abs(dr) > Math.abs(dp) * 1.5)) { nodArmed = false; nodAt = now; onHead(2, now); return; } // the bigger motion wins when both read
-  if (tilt !== -1 && headArmed) { headArmed = false; headAt = now; onHead(tilt, now); }
+  const tiltReady = tilt !== -1 && headArmed, nodReady = nod && nodArmed;
+  const tiltStrength = tiltReady ? Math.max(Math.abs(r) / TILT, Math.abs(dr) / FLICK_T) : 0, nodStrength = nodReady ? Math.max(p / NOD, dp / NOD_FLICK) : 0;
+  if (nodReady && (!tiltReady || nodStrength >= tiltStrength)) { nodArmed = false; nodAt = now; onHead(2, now); return; } // the stronger read wins
+  if (tiltReady) { headArmed = false; headAt = now; peakR = r; onHead(tilt, now); }
 }
 function onHead(lane, now) {
   if (mode === 'howto') { shootHearts(lane, 2); return; } // the guide just plays; a move during it only sparks a little feedback
@@ -321,7 +357,8 @@ function onHead(lane, now) {
 $('phone').addEventListener('pointerdown', (e) => {
   if (!practice || mode !== 'playing') return;
   const r = $('phone').getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
-  const lane = x < 0.38 ? 0 : x > 0.62 ? 1 : 2;
+  let lane = x < 0.38 ? 0 : x > 0.62 ? 1 : 2;
+  if (lane === 2 && notes.some((n) => !n.hit && n.lane === 3 && Math.abs(n.t - songTime) <= GOOD * 1.3)) lane = 3;
   $('eyeL').classList.toggle('on', lane !== 1); $('eyeR').classList.toggle('on', lane !== 0);
   setTimeout(() => { $('eyeL').classList.remove('on'); $('eyeR').classList.remove('on'); }, 120);
   if (lane === 2) { pulse = [0, 0]; hand = [0, 0]; } else { pulse[lane] = 0; hand[lane] = 0; }
@@ -367,7 +404,7 @@ const SHOW_ZONES = new URLSearchParams(location.search).has('zones');
 const DEBUG = new URLSearchParams(location.search).has('debug');
 const dlines = [];
 function dlog(m) { dlines.push(m); if (dlines.length > 14) dlines.shift(); }
-function nearest(at) { let b = null, d = 9; for (const n of notes) { if (n.hit) continue; const x = Math.abs(n.t - at); if (x < d) { d = x; b = n; } } return b ? `#${b.id}(${['L','R','both'][b.lane]}) ${(b.t - at).toFixed(2)}` : 'none'; }
+function nearest(at) { let b = null, d = 9; for (const n of notes) { if (n.hit) continue; const x = Math.abs(n.t - at); if (x < d) { d = x; b = n; } } return b ? `#${b.id}(${['L','R','both','voice'][b.lane]}) ${(b.t - at).toFixed(2)}` : 'none'; }
 function drawDebug() { ctx.save(); ctx.font = '11px ui-monospace, monospace'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(4, H * 0.3, W - 8, 14 * dlines.length + 8); ctx.fillStyle = '#9dff9d'; dlines.forEach((l, i) => ctx.fillText(l, 8, H * 0.3 + 12 + i * 14)); ctx.restore(); }
 function drawZones() { // TikTok Effect safe zones on a 390×694 canvas, scaled to this canvas height
   const k = H / 694; ctx.save(); ctx.lineWidth = 1.5;
@@ -402,6 +439,15 @@ function drawInner() {
   for (const n of notes) {
     const dt2 = n.t - songTime; if (dt2 > LEAD || dt2 < -0.8) continue;
     const k = 1 - dt2 / LEAD, y = hy - (dt2 / LEAD) * (hy + 60);
+    if (n.lane === 3) { // the shout: a mic falling down the middle onto the mixer, with the word to say
+      const x = W / 2, hy3 = hy - H * 0.19, y3 = hy3 - (dt2 / LEAD) * (hy3 + 60);
+      if (n.hit === 'miss') { const m = Math.min(1, (songTime - n.t) / 0.5); ctx.globalAlpha = 1 - m; ctx.font = '40px system-ui'; ctx.fillText('💥', x, hy3 - m * 30); ctx.globalAlpha = 1; continue; }
+      if (n.hit) { const m = Math.min(1, (songTime - n.hitAt) / 0.5); img(NOTE[3], x, hy3 - m * 50, 70 + m * 40, { alpha: 1 - m, rot: -0.3 + m * 0.5 }); continue; }
+      const near = Math.max(0, (k - 0.45) / 0.55); ctx.beginPath(); ctx.arc(x, y3, 42, 0, TAU); ctx.fillStyle = `rgba(255,92,138,${0.06 + near * 0.32})`; ctx.fill();
+      img(NOTE[3], x, y3, 62 + 22 * k, { rot: -0.35 + Math.sin(songTime * 5 + n.id) * 0.1 });
+      ctx.font = '900 22px system-ui'; ctx.lineWidth = 5; ctx.strokeStyle = '#14122a'; ctx.fillStyle = '#ffe052'; ctx.strokeText(n.word, x, y3 - 52 - 10 * k); ctx.fillText(n.word, x, y3 - 52 - 10 * k);
+      continue;
+    }
     const lanes = n.lane === 2 ? [0, 1] : [n.lane];
     for (const l of lanes) {
       const src = NOTE[n.lane === 2 ? 2 : l];
@@ -414,11 +460,11 @@ function drawInner() {
   }
   for (const e of effects) {
     const k = (songTime - e.at) / 0.7; if (k > 1) continue;
-    const xs = e.lane === 2 ? LANE_X : [LANE_X[e.lane]];
+    const xs = e.lane === 2 ? LANE_X : e.lane === 3 ? [W / 2] : [LANE_X[e.lane]]; const ey = e.lane === 3 ? hy - H * 0.19 : hy;
     for (const x of xs) {
       ctx.globalAlpha = 1 - k; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      if (e.kind === 'miss') { ctx.font = '30px system-ui'; ctx.fillText('💢', x + 40, hy - 90 - k * 40); }
-      else { const n = e.kind === 'perfect' ? 8 : 4; for (let i = 0; i < n; i++) { const a = i * TAU / n + k * 2; ctx.font = (12 + (i % 3) * 6) + 'px system-ui'; ctx.fillText(['🎵', '✨', '🎶'][i % 3], x + Math.cos(a) * (36 + k * 90), hy - 20 - k * 110 + Math.sin(a) * 22); } }
+      if (e.kind === 'miss') { ctx.font = '30px system-ui'; ctx.fillText('💢', x + 40, ey - 90 - k * 40); }
+      else { const n = e.kind === 'perfect' ? 8 : 4; for (let i = 0; i < n; i++) { const a = i * TAU / n + k * 2; ctx.font = (12 + (i % 3) * 6) + 'px system-ui'; ctx.fillText(['🎵', '✨', '🎶'][i % 3], x + Math.cos(a) * (36 + k * 90), ey - 20 - k * 110 + Math.sin(a) * 22); } }
       ctx.globalAlpha = 1;
     }
   }
@@ -493,7 +539,7 @@ function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.a
 
 // ---------- loop ----------
 function loop() {
-  requestAnimationFrame(loop); checkSize();
+  requestAnimationFrame(loop); checkSize(); updateMic();
   if (mode === 'playing') songTime = audioCtx.currentTime - startAt;
   if (landmarker && stream && video.readyState >= 2 && video.currentTime !== lastVideoTime && ['setup', 'howto', 'playing', 'countdown', 'result'].includes(mode)) {
     lastVideoTime = video.currentTime;
@@ -512,7 +558,7 @@ function loop() {
   }
   if (mode === 'playing') {
     songTime = audioCtx.currentTime - startAt;
-    for (const n of notes) if (!n.hit && songTime - n.t > (n.id < 2 ? GOOD * 1.5 : GOOD)) missNote(n);
+    for (const n of notes) if (!n.hit && songTime - n.t > (n.id < 2 ? GOOD * 1.5 : n.lane === 3 ? GOOD * 1.3 : GOOD)) missNote(n);
     $('time').textContent = Math.max(0, Math.ceil(SONG - songTime));
     if (songTime > SONG + 0.6) endRound();
   }
