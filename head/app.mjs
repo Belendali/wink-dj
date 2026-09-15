@@ -183,7 +183,7 @@ function makeChart() {
   let lane = rnd() < 0.5 ? 0 : 1, same = 0; const dropAt = rnd() < 0.5 ? 6 : 7;   // which side opens and where the drop sits change every round
   for (let b = 4; b < beats - 1; b++) {
     const t = b * BEAT;
-    if ((b - 4) % 8 === 4) { list.push({ t, lane: 3, word: Math.floor((b - 4) / 8) % 2 ? 'YO!' : 'HEY!' }); same = 0; continue; } // the shout: say it into the mic
+    if ((b - 4) % 8 === 4) { if (micAn || practice) list.push({ t, lane: 3, word: Math.floor((b - 4) / 8) % 2 ? 'YO!' : 'HEY!' }); same = 0; continue; } // the shout: say it into the mic (skipped when the mic was refused)
     if (b % 8 === dropAt) { list.push({ t, lane: 2 }); same = 0; continue; }   // the drop: nod
     if (b < 12 && b % 2) continue;                                              // ease in: every other beat at first
     if (b >= 12 && rnd() < 0.12) continue;                                      // a breath now and then
