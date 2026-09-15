@@ -56,8 +56,8 @@
 <div class="wrap">
   <div class="k">Team handoff / Kit 04</div>
   <h1>Asset library.</h1>
-  <p class="lede">Everything Wink DJ and Head DJ draw with. One booth, ten club-goers in three states, note and face stickers, the head-tilt guide, synthesized sound, a palette, and the rules behind both inputs.</p>
-  <a class="btn" href="./wink-dj-assets.zip" download>Download kit (zip) ↓</a><a class="btn ghost" href="../">Blink DJ ↗</a><a class="btn ghost" href="../head/">Head DJ ↗</a><a class="btn ghost" href="https://github.com/Belendali/wink-dj">GitHub ↗</a>
+  <p class="lede">Everything Wink DJ and Nod the Beat draw with. One booth, ten club-goers in three states, note and face stickers, the head-tilt guide, synthesized sound, a palette, and the rules behind both inputs.</p>
+  <a class="btn" href="./wink-dj-assets.zip" download>Download kit (zip) ↓</a><a class="btn ghost" href="../">Blink DJ ↗</a><a class="btn ghost" href="../head/">Nod the Beat ↗</a><a class="btn ghost" href="https://github.com/Belendali/wink-dj">GitHub ↗</a>
   <nav><a href="#booth">Booth</a><a href="#notes">Notes</a><a href="#result">Result stickers</a><a href="#crowd">Crowd</a><a href="#guide">Head guide</a><a href="#drawn">Drawn in code</a><a href="#sound">Sound</a><a href="#palette">Palette</a><a href="#rules">Rules &amp; input</a></nav>
 
   <section id="booth">
@@ -226,7 +226,7 @@
   </section>
 
   <section id="guide">
-    <h2>Head DJ guide</h2>
+    <h2>Nod the Beat guide</h2>
     <p class="sub">The head-tilt variant opens with a three-second warm-up: one picture per second, then the beat starts whether or not you followed along.</p>
     <div class="grid">
       <div class="card">
@@ -286,7 +286,7 @@
     <table>
       <tr><th>Round</th><td>15 seconds at 80 bpm. Notes fall onto the left and right platters; hit them on the beat. Every eighth beat is a drop that wants both at once.</td></tr>
       <tr><th>Blink DJ</th><td>Left eye for the left platter, right eye for the right, both eyes for the drop. Same eye tracking as Wink Wink: blendshape difference over 0.18, 70 ms single-vs-both window, 40 ms lag compensation. Perfect ±280 ms, Good ±600 ms.</td></tr>
-      <tr><th>Head DJ</th><td>Tilt your head left or right for the platters, nod for the drop. Roll is the angle of the eye line, pitch is the nose against the eye midpoint. A tilt of about 6° triggers and re-arms once you are back within 3°; the resting pose is calibrated over the first 30 frames and drifts slowly. Perfect ±320 ms, Good ±700 ms.</td></tr>
+      <tr><th>Nod the Beat</th><td>Tilt your head left or right for the platters, nod for the drop. Roll is the angle of the eye line, pitch is the nose against the eye midpoint. A tilt of about 6° triggers and re-arms once you are back within 3°; the resting pose is calibrated over the first 30 frames and drifts slowly. Perfect ±320 ms, Good ±700 ms.</td></tr>
       <tr><th>Chart</th><td>Strict left–right alternation on every beat, drop every eighth beat. First note lands about 2.7 s after GO.</td></tr>
       <tr><th>Safe zones</th><td>390 × 694 canvas. Platters and HUD inside the core zone (x 65–325, y 82–533); the crowd below the booth stays inside the visual zone. <code>?zones</code> shows the overlay, <code>?debug</code> logs detection.</td></tr>
       <tr><th>Flow</th><td>Camera card → "Blink to start" (blink) or three-second warm-up (head) → count-in → 15 s → result with face stickers.</td></tr>
