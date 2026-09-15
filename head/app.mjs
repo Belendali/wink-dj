@@ -152,12 +152,18 @@ function cheer(big = false) { // a short noisy "whoo" from the crowd
   const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(big ? 0.3 : 0.16, t + 0.06); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   n.connect(f).connect(g).connect(audioCtx.destination); n.start(t); n.stop(t + dur + 0.02);
 }
-function roar() { // end-of-round crowd cheer: a long rising whoo with a few voices and a whistle
+function roar() { // end-of-round crowd: a big rising whoo from many voices, a whistle, and claps on the beat
   if (!audioCtx) return; const t = audioCtx.currentTime;
   if (!noiseBuf) noise(t, 0.01, 0);
-  for (let v = 0; v < 3; v++) { const n = audioCtx.createBufferSource(); n.buffer = noiseBuf; const f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(500 + v * 200, t); f.frequency.exponentialRampToValueAtTime(2200 + v * 400, t + 1.2); f.Q.value = 1.1; const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t + v * 0.08); g.gain.exponentialRampToValueAtTime(0.28, t + 0.25 + v * 0.08); g.gain.setValueAtTime(0.28, t + 0.9); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6); n.connect(f).connect(g).connect(audioCtx.destination); n.start(t); n.stop(t + 1.7); }
-  [523, 659, 784, 1047, 1319].forEach((fr, i) => tone(fr, t + 0.1 + i * 0.09, 0.5, 'triangle', 0.1));
-  tone(2200, t + 0.5, 0.35, 'sine', 0.08, 3200); tone(3200, t + 0.85, 0.3, 'sine', 0.06, 2400); // whistle
+  for (let v = 0; v < 6; v++) { const n = audioCtx.createBufferSource(); n.buffer = noiseBuf; n.loop = true; const f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(400 + v * 180, t); f.frequency.exponentialRampToValueAtTime(1900 + v * 350, t + 1.4); f.Q.value = 1.3; const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t + v * 0.06); g.gain.exponentialRampToValueAtTime(0.16, t + 0.25 + v * 0.06); g.gain.setValueAtTime(0.16, t + 1.3); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4); n.connect(f).connect(g).connect(audioCtx.destination); n.start(t); n.stop(t + 2.5); }
+  for (let i = 0; i < 6; i++) { const at = t + 0.5 + i * BEAT / 2; noise(at, 0.08, 0.22); noise(at + 0.02, 0.06, 0.14); } // the crowd claps along
+  tone(2200, t + 0.5, 0.35, 'sine', 0.09, 3200); tone(3200, t + 0.85, 0.3, 'sine', 0.07, 2400); // whistle
+}
+function fanfare() { // the win hit: a big chord with a sub, a cymbal wash, and a rising run on top
+  if (!audioCtx) return; const t = audioCtx.currentTime;
+  [262, 330, 392, 523].forEach((f) => { tone(f, t, 1.2, 'sawtooth', 0.1); tone(f * 2, t, 0.9, 'triangle', 0.06); });
+  tone(65, t, 1.1, 'sine', 0.5, 50); noise(t, 0.6, 0.25); noise(t + 0.02, 0.9, 0.12);
+  [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, t + 0.15 + i * 0.07, 0.45, 'square', 0.09));
 }
 function scratch() { // miss: a record scratch and a low boo
   if (!audioCtx) return; const t = audioCtx.currentTime; riff = Math.max(0, riff - 2);
@@ -274,7 +280,7 @@ function endRound() {
   const total = notes.length, hits = stats.perfect + stats.good, pct = total ? Math.round(hits / total * 100) : 0;
   $('rPct').textContent = pct + '%'; $('rLine').textContent = hits + ' of ' + total + ' beats landed';
   $('resultTitle').textContent = pct >= 90 ? 'The club is yours.' : pct >= 70 ? 'Crowd is moving.' : pct >= 40 ? 'Warming up.' : 'They want the aux back.';
-  showcase = []; crowdFinal = pct >= 50 ? 'good' : 'bad'; if (crowdFinal === 'good') { if (!stinger('great', 1, 0.15)) roar(); } else scratch();
+  showcase = []; crowdFinal = pct >= 50 ? 'good' : 'bad'; if (crowdFinal === 'good') { fanfare(); roar(); stinger('great', 1, 0.2); } else scratch();
   show('rbtns', false); clearTimeout(endRound.t); endRound.t = setTimeout(() => show('rbtns'), 5000);
   resultAt = performance.now();
   confetti = crowdFinal !== 'good' ? [] : Array.from({ length: 90 }, () => ({ x: Math.random() * W, y: -Math.random() * H, vx: (Math.random() - .5) * 40, vy: 80 + Math.random() * 120, r: 4 + Math.random() * 5, c: ['#ff5c8a', '#ffb3c8', '#b58cff', '#ffe052', '#fff7fb'][Math.floor(Math.random() * 5)], a: Math.random() * TAU }));
@@ -421,7 +427,9 @@ function drawInner() {
     { // the crowd gives the verdict: dancing or sulking, big and close
       const n = crowd.length, t = (performance.now() - resultAt) / 1000;
       drawLights(dt); drawBooth(dt); drawFaceSticker();
-      crowd.forEach((c, i) => { const x = 19 + (i + 0.5) * (W - 38) / n, good = crowdFinal === 'good', dir = i % 2 ? -1 : 1, rock = Math.sin(t / BEAT * Math.PI); const bob = good ? Math.abs(rock) * 20 : 2; const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, H * 1.01 - bob + (1 - k) * 140, { scale: 0.85, rot: good ? rock * 0.22 * dir : 0 }); });
+      crowd.forEach((c, i) => { const x = 19 + (i + 0.5) * (W - 38) / n, good = crowdFinal === 'good', dir = i % 2 ? -1 : 1, rock = Math.sin(t / BEAT * Math.PI);
+        const ph = ((t / BEAT + i * 0.45) % 2) / 2, jump = good ? Math.pow(Math.max(0, Math.sin(ph * Math.PI)), 0.8) * 54 : 0; // each one hops once every two beats, staggered down the line
+        const k = Math.min(1, Math.max(0, (t - i * 0.08) / 0.4)); sprite(PEOPLE[c.who][good ? 'good' : 'bad'], x, H * 1.01 - (good ? jump : 2) + (1 - k) * 140, { scale: 0.85 + (good ? jump / 54 * 0.05 : 0), rot: good ? rock * 0.14 * dir : 0 }); });
     }
     const dtc = (performance.now() - confettiAt) / 1000;
     for (const c of confetti) { const y = c.y + c.vy * dtc, x = c.x + c.vx * dtc + Math.sin(dtc * 3 + c.a) * 12; if (y > H + 10) continue; ctx.save(); ctx.translate(x, y); ctx.rotate(c.a + dtc * 4); ctx.fillStyle = c.c; ctx.fillRect(-c.r / 2, -c.r, c.r, c.r * 2); ctx.restore(); }
