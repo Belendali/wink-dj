@@ -415,8 +415,8 @@ function drawInner() {
   drawHearts(dt);
   ctx.textBaseline = 'alphabetic';
 }
-function drawHeadphones(m, d, tilt) { // cups sit on the ears (a touch below eye level), the band arcs over the hair; the image's cup centres are 19% below its middle
-  const w = d * 3.15, k = 0.188 * w, cy = m.y + d * 0.18; img(STICKER.headphones, m.x + Math.sin(tilt) * k, cy - Math.cos(tilt) * k, w, { rot: tilt });
+function drawHeadphones(m, d, tilt) { // cups sit on the ears (a touch below eye level), the band arcs over the hair; the image's cup centres are 22% below its middle
+  const w = d * 3.15, k = 0.223 * w, cy = m.y + d * 0.18; img(STICKER.headphones, m.x + Math.sin(tilt) * k, cy - Math.cos(tilt) * k, w, { rot: tilt });
 }
 function drawShades() { if (!eyePos.L || !eyePos.R || practice) return; const m = { x: (eyePos.L.x + eyePos.R.x) / 2, y: (eyePos.L.y + eyePos.R.y) / 2 }, d = Math.hypot(eyePos.R.x - eyePos.L.x, eyePos.R.y - eyePos.L.y), tilt = Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x); drawHeadphones(m, d, tilt); img(STICKER.glasses, m.x, m.y, d * 2.7, { rot: tilt }); }
 function drawFaceSticker() { // the verdict on the player's own face: shades + chain, or a frustration cloud
