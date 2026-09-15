@@ -408,7 +408,7 @@ function drawFaceSticker() { // the verdict on the player's own face: shades + c
   const tilt = eyePos.L && eyePos.R ? Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x) : 0;
   const faceW = face ? Math.hypot(face.right.x - face.left.x, face.right.y - face.left.y) : eyeDist * 2.4;
   if (crowdFinal === 'good') {
-    img(STICKER.glasses, eyeMid.x, eyeMid.y, eyeDist * 2.7, { rot: tilt, flipY: true });              // glasses span both eyes (image is upside down, so flip)
+    img(STICKER.glasses, eyeMid.x, eyeMid.y, eyeDist * 2.7, { rot: tilt });              // glasses span both eyes (image is upside down, so flip)
   } else {
     const top = face ? face.top : { x: eyeMid.x, y: eyeMid.y - eyeDist * 1.2 };
     const t = performance.now() / 1000;
@@ -475,7 +475,7 @@ function loop() {
           const vw = video.videoWidth, vh = video.videoHeight, s = Math.max(W / vw, H / vh), dw = vw * s, dh = vh * s;
           return { x: (W - dw) / 2 + (1 - lm[i].x) * dw, y: (H - dh) / 2 + lm[i].y * dh }; };
         const mid = (a, b) => { const p = toC(a), q = toC(b); return { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }; };
-        eyePos = { L: mid(159, 145), R: mid(386, 374) }; face = { chin: toC(152), top: toC(10), left: toC(234), right: toC(454) }; }
+        eyePos = { L: mid(386, 374), R: mid(159, 145) }; face = { chin: toC(152), top: toC(10), left: toC(234), right: toC(454) }; }
       if (bs) { const get = (name) => (bs.categories.find((c) => c.categoryName === name) || {}).score || 0; handleEyes(get('eyeBlinkLeft'), get('eyeBlinkRight')); }
 
     } catch (e) { /* skip frame */ }

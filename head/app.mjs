@@ -418,13 +418,13 @@ function drawInner() {
 function drawHeadphones(m, d, tilt) { // cups sit on the ears (a touch below eye level), the band arcs over the hair; the image's cup centres are 19% below its middle
   const w = d * 3.15, k = 0.188 * w, cy = m.y + d * 0.18; img(STICKER.headphones, m.x + Math.sin(tilt) * k, cy - Math.cos(tilt) * k, w, { rot: tilt });
 }
-function drawShades() { if (!eyePos.L || !eyePos.R || practice) return; const m = { x: (eyePos.L.x + eyePos.R.x) / 2, y: (eyePos.L.y + eyePos.R.y) / 2 }, d = Math.hypot(eyePos.R.x - eyePos.L.x, eyePos.R.y - eyePos.L.y), tilt = Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x); drawHeadphones(m, d, tilt); img(STICKER.glasses, m.x, m.y, d * 2.7, { rot: tilt, flipY: true }); }
+function drawShades() { if (!eyePos.L || !eyePos.R || practice) return; const m = { x: (eyePos.L.x + eyePos.R.x) / 2, y: (eyePos.L.y + eyePos.R.y) / 2 }, d = Math.hypot(eyePos.R.x - eyePos.L.x, eyePos.R.y - eyePos.L.y), tilt = Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x); drawHeadphones(m, d, tilt); img(STICKER.glasses, m.x, m.y, d * 2.7, { rot: tilt }); }
 function drawFaceSticker() { // the verdict on the player's own face: shades + chain, or a frustration cloud
   const eyeMid = eyePos.L && eyePos.R ? { x: (eyePos.L.x + eyePos.R.x) / 2, y: (eyePos.L.y + eyePos.R.y) / 2 } : { x: W / 2, y: H * 0.26 };
   const eyeDist = eyePos.L && eyePos.R ? Math.hypot(eyePos.R.x - eyePos.L.x, eyePos.R.y - eyePos.L.y) : 60;
   const tilt = eyePos.L && eyePos.R ? Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x) : 0;
   const faceW = face ? Math.hypot(face.right.x - face.left.x, face.right.y - face.left.y) : eyeDist * 2.4;
-  drawHeadphones(eyeMid, eyeDist, tilt); img(STICKER.glasses, eyeMid.x, eyeMid.y, eyeDist * 2.7, { rot: tilt, flipY: true });
+  drawHeadphones(eyeMid, eyeDist, tilt); img(STICKER.glasses, eyeMid.x, eyeMid.y, eyeDist * 2.7, { rot: tilt });
   if (crowdFinal !== 'good') {
     const top = face ? face.top : { x: eyeMid.x, y: eyeMid.y - eyeDist * 1.2 };
     const t = performance.now() / 1000;
@@ -494,7 +494,7 @@ function loop() {
           const vw = video.videoWidth, vh = video.videoHeight, s = Math.max(W / vw, H / vh), dw = vw * s, dh = vh * s;
           return { x: (W - dw) / 2 + (1 - lm[i].x) * dw, y: (H - dh) / 2 + lm[i].y * dh }; };
         const mid = (a, b) => { const p = toC(a), q = toC(b); return { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }; };
-        eyePos = { L: mid(159, 145), R: mid(386, 374) }; face = { chin: toC(152), top: toC(10), left: toC(234), right: toC(454) }; handleHead(toC(1), eyePos.L, eyePos.R, face.chin); }
+        eyePos = { L: mid(386, 374), R: mid(159, 145) }; face = { chin: toC(152), top: toC(10), left: toC(234), right: toC(454) }; handleHead(toC(1), eyePos.L, eyePos.R, face.chin); }
 
 
     } catch (e) { /* skip frame */ }
