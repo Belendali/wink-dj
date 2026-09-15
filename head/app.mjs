@@ -446,12 +446,13 @@ function drawInner() {
     const dt2 = n.t - songTime; if (dt2 > LEAD || dt2 < -0.8) continue;
     const k = 1 - dt2 / LEAD, y = hy - (dt2 / LEAD) * (hy + 60);
     if (n.lane === 3) { // the shout: a mic falling down the middle onto the mixer, with the word to say
-      const x = W / 2, hy3 = hy - H * 0.19, y3 = hy3 - (dt2 / LEAD) * (hy3 + 60);
+      const x = W / 2, hy3 = BOOTH_TOP() + 600 * BOOTH_S, y3 = hy3 - (Math.max(0, dt2) / LEAD) * (hy3 + 60); // lands on the table top and waits there
+      const near3 = Math.max(0, 1 - Math.abs(dt2) / (GOOD * 1.3)), grow = 1 + 0.4 * near3 + 0.07 * Math.sin(songTime * 16) * near3; // swells and throbs while it is time to shout
       if (n.hit === 'miss') { const m = Math.min(1, (songTime - n.t) / 0.5); ctx.globalAlpha = 1 - m; ctx.font = '40px system-ui'; ctx.fillText('💥', x, hy3 - m * 30); ctx.globalAlpha = 1; continue; }
       if (n.hit) { const m = Math.min(1, (songTime - n.hitAt) / 0.5); img(NOTE[3], x, hy3 - m * 50, 70 + m * 40, { alpha: 1 - m, rot: -0.3 + m * 0.5 }); continue; }
-      const near = Math.max(0, (k - 0.45) / 0.55); ctx.beginPath(); ctx.arc(x, y3, 42, 0, TAU); ctx.fillStyle = `rgba(255,92,138,${0.06 + near * 0.32})`; ctx.fill();
-      img(NOTE[3], x, y3, 62 + 22 * k, { rot: -0.35 + Math.sin(songTime * 5 + n.id) * 0.1 });
-      ctx.font = '900 22px system-ui'; ctx.lineWidth = 5; ctx.strokeStyle = '#14122a'; ctx.fillStyle = '#ffe052'; ctx.strokeText(n.word, x, y3 - 52 - 10 * k); ctx.fillText(n.word, x, y3 - 52 - 10 * k);
+      const near = Math.max(0, (k - 0.45) / 0.55); ctx.beginPath(); ctx.arc(x, y3, 42 * grow, 0, TAU); ctx.fillStyle = `rgba(255,92,138,${Math.min(0.6, 0.06 + near * 0.32 + near3 * 0.2)})`; ctx.fill();
+      img(NOTE[3], x, y3, (62 + 22 * k) * grow, { rot: -0.35 + Math.sin(songTime * 5 + n.id) * 0.1 });
+      const wy = y3 - (52 + 10 * k) * grow; ctx.font = `900 ${Math.round(22 * (1 + 0.35 * near3))}px system-ui`; ctx.lineWidth = 5; ctx.strokeStyle = '#14122a'; ctx.fillStyle = '#ffe052'; ctx.strokeText(n.word, x, wy); ctx.fillText(n.word, x, wy);
       continue;
     }
     const lanes = n.lane === 2 ? [0, 1] : [n.lane];
@@ -466,7 +467,7 @@ function drawInner() {
   }
   for (const e of effects) {
     const k = (songTime - e.at) / 0.7; if (k > 1) continue;
-    const xs = e.lane === 2 ? LANE_X : e.lane === 3 ? [W / 2] : [LANE_X[e.lane]]; const ey = e.lane === 3 ? hy - H * 0.19 : hy;
+    const xs = e.lane === 2 ? LANE_X : e.lane === 3 ? [W / 2] : [LANE_X[e.lane]]; const ey = e.lane === 3 ? BOOTH_TOP() + 600 * BOOTH_S : hy;
     for (const x of xs) {
       ctx.globalAlpha = 1 - k; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       if (e.kind === 'miss') { ctx.font = '30px system-ui'; ctx.fillText('💢', x + 40, ey - 90 - k * 40); }
