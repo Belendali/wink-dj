@@ -24,7 +24,7 @@ const BOOTH = '../assets/booth/booth.png', HAND = ['../assets/booth/hand-left.pn
 const NOTE = ['../assets/stickers/note-pink.png', '../assets/stickers/note-cyan.png', '../assets/stickers/note-record.png'];
 const GUIDE = [{ img: '../assets/guide/tilt-right.png', want: 0, text: 'Tilt left' }, { img: '../assets/guide/nod.png', want: 2, text: 'Nod' }, { img: '../assets/guide/tilt-left.png', want: 1, text: 'Tilt right' }]; // images lean the way you see yourself in the mirror
 let guideDone = [false, false, false], guideDoneAt = 0, guideStep = 0;
-const STICKER = { glasses: '../assets/stickers/sunglasses.png', chain: '../assets/stickers/chain.png', frustrated: '../assets/stickers/frustrated.png' };
+const STICKER = { glasses: '../assets/stickers/sunglasses.png', headphones: '../assets/stickers/headphones.png', chain: '../assets/stickers/chain.png', frustrated: '../assets/stickers/frustrated.png' };
 const IMG = {};
 function loadImg(src) { if (IMG[src]) return IMG[src]; const i = new Image(); i.src = src; IMG[src] = i; return i; }
 PEOPLE.forEach((p) => Object.values(p).forEach(loadImg)); loadImg(BOOTH); HAND.forEach(loadImg); NOTE.forEach(loadImg); Object.values(STICKER).forEach(loadImg); GUIDE.forEach((g) => loadImg(g.img));
@@ -187,7 +187,7 @@ async function startCamera() {
 function stopCamera() { if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; video.srcObject = null; } }
 
 function showHowto() {
-  ensureAudio(); setMode('howto'); clearTimeout(beginCountdown.t); guideStep = 0; guideDone = [false, false, false]; guideDoneAt = performance.now(); baseRoll = null; basePitch = null; baseSamples = 0;
+  ensureAudio(); setMode('howto'); clearTimeout(beginCountdown.t); guideStep = 0; guideDone = [false, false, false]; guideDoneAt = performance.now();
   if (!practice) { let k = 0; clearInterval(showHowto.iv); showHowto.iv = setInterval(() => { guideDone[k] = true; guideStep = ++k; guideDoneAt = performance.now(); sfx('count'); if (k >= GUIDE.length) { clearInterval(showHowto.iv); setTimeout(() => { if (mode === 'howto') startNow(); }, 400); } }, 1000); }
   $('howtoCta').textContent = practice ? 'Starting…' : 'Follow along';
   if (practice) { let k = 0; const iv = setInterval(() => { guideDone[k] = true; guideStep = ++k; guideDoneAt = performance.now(); if (k >= GUIDE.length) { clearInterval(iv); beginCountdown.t = setTimeout(startCountdown, 500); } }, 900); }
@@ -264,25 +264,29 @@ function updateHud() { $('score').textContent = stats.score; $('combo').textCont
 let smRoll = 0, smPitch = 0, baseRoll = null, basePitch = null, baseSamples = 0, headArmed = true, nodArmed = true, faceAt = 0;
 let eyePos = { L: null, R: null }, face = null, hearts = [];
 let pulse = [0, 0], hand = [0, 0], flash = 0, riff = 0, crowd = [];
-const TILT = 0.11, TILT_REARM = 0.05, NOD = 0.09; // ~6° to trigger, back within ~3° to re-arm
+const TILT = 0.085, TILT_REARM = 0.045, NOD = 0.05; // ~5° to trigger, back within ~2.5° to re-arm; a nod of ~10° clears NOD
+const FLICK_MS = 170, FLICK_T = 0.055, FLICK_N = 0.03; // a quick move triggers early: this much change within FLICK_MS, once past a third of the threshold
+let hist = [], headAt = 0, nodAt = 0;
 function handleHead(nose, L, R, chin) {
   faceAt = performance.now();
   const midY = (L.y + R.y) / 2, ed = Math.hypot(R.x - L.x, R.y - L.y) || 1;
   const roll = Math.atan2(R.y - L.y, R.x - L.x);  // eye line angle: negative = head tilted toward screen-left
   const pitch = (nose.y - midY) / ed;             // grows when the head drops into a nod
-  smRoll += (roll - smRoll) * 0.7; smPitch += (pitch - smPitch) * 0.7;
-  if (baseRoll === null || baseSamples < 30) { // learn your resting pose in the first half second (phone held crooked, head naturally tilted)
+  smRoll += (roll - smRoll) * 0.75; smPitch += (pitch - smPitch) * 0.75;
+  if (baseRoll === null || baseSamples < 30) { // learn your resting pose while the face is found, before the guide starts (phone held crooked, head naturally tilted)
     baseRoll = baseRoll === null ? smRoll : baseRoll + (smRoll - baseRoll) * 0.15; basePitch = basePitch === null ? smPitch : basePitch + (smPitch - basePitch) * 0.15; baseSamples++;
-  } else if (Math.abs(smRoll - baseRoll) < TILT_REARM && smPitch - basePitch < NOD * 0.5) { baseRoll += (smRoll - baseRoll) * 0.02; basePitch += (smPitch - basePitch) * 0.02; } // drift only while resting
-  const r = smRoll - baseRoll, tilt = r < -TILT ? 0 : r > TILT ? 1 : -1;
-  const nod = smPitch - basePitch > NOD;
+  } else if (Math.abs(smRoll - baseRoll) < TILT_REARM && Math.abs(smPitch - basePitch) < NOD * 0.4) { baseRoll += (smRoll - baseRoll) * 0.02; basePitch += (smPitch - basePitch) * 0.02; } // drift only while resting
+  const now = performance.now(), r = smRoll - baseRoll, p = smPitch - basePitch;
+  hist.push({ t: now, r, p }); while (hist.length > 1 && now - hist[0].t > FLICK_MS) hist.shift();
+  const dr = r - hist[0].r, dp = p - hist[0].p;
+  const tilt = r < -TILT || (dr < -FLICK_T && r < -TILT * 0.35) ? 0 : r > TILT || (dr > FLICK_T && r > TILT * 0.35) ? 1 : -1;
+  const nod = p > NOD || (dp > FLICK_N && p > NOD * 0.4);
   $('eyeL').classList.toggle('on', tilt === 0 || nod); $('eyeR').classList.toggle('on', tilt === 1 || nod);
-  if (DEBUG && mode === 'playing') dlog(`roll ${(r * 57.3).toFixed(0)}° pitch ${(smPitch - basePitch).toFixed(2)}`);
-  const now = performance.now();
-  if (Math.abs(r) < TILT_REARM) headArmed = true;
-  if (!nod) nodArmed = true;
-  if (nod && nodArmed) { nodArmed = false; onHead(2, now); return; }
-  if (tilt !== -1 && headArmed) { headArmed = false; onHead(tilt, now); }
+  if (DEBUG && mode === 'playing') dlog(`roll ${(r * 57.3).toFixed(1)}° dr ${(dr * 57.3).toFixed(1)} pitch ${p.toFixed(3)} dp ${dp.toFixed(3)} ${headArmed ? '' : 'held'}`);
+  if (Math.abs(r) < TILT * 0.6) headArmed = true;   // back most of the way to centre re-arms; left-right-left passes through centre anyway
+  if (p < NOD * 0.5) nodArmed = true;
+  if (nod && nodArmed && !(tilt !== -1 && Math.abs(dr) > Math.abs(dp) * 1.5)) { nodArmed = false; nodAt = now; onHead(2, now); return; } // the bigger motion wins when both read
+  if (tilt !== -1 && headArmed) { headArmed = false; headAt = now; onHead(tilt, now); }
 }
 function onHead(lane, now) {
   if (mode === 'howto') { shootHearts(lane, 2); return; } // the guide just plays; a move during it only sparks a little feedback
@@ -411,13 +415,16 @@ function drawInner() {
   drawHearts(dt);
   ctx.textBaseline = 'alphabetic';
 }
-function drawShades() { if (!eyePos.L || !eyePos.R || practice) return; const m = { x: (eyePos.L.x + eyePos.R.x) / 2, y: (eyePos.L.y + eyePos.R.y) / 2 }, d = Math.hypot(eyePos.R.x - eyePos.L.x, eyePos.R.y - eyePos.L.y), tilt = Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x); img(STICKER.glasses, m.x, m.y, d * 2.7, { rot: tilt, flipY: true }); }
+function drawHeadphones(m, d, tilt) { // cups sit on the ears (a touch below eye level), the band arcs over the hair; the image's cup centres are 19% below its middle
+  const w = d * 3.15, k = 0.188 * w, cy = m.y + d * 0.18; img(STICKER.headphones, m.x + Math.sin(tilt) * k, cy - Math.cos(tilt) * k, w, { rot: tilt });
+}
+function drawShades() { if (!eyePos.L || !eyePos.R || practice) return; const m = { x: (eyePos.L.x + eyePos.R.x) / 2, y: (eyePos.L.y + eyePos.R.y) / 2 }, d = Math.hypot(eyePos.R.x - eyePos.L.x, eyePos.R.y - eyePos.L.y), tilt = Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x); drawHeadphones(m, d, tilt); img(STICKER.glasses, m.x, m.y, d * 2.7, { rot: tilt, flipY: true }); }
 function drawFaceSticker() { // the verdict on the player's own face: shades + chain, or a frustration cloud
   const eyeMid = eyePos.L && eyePos.R ? { x: (eyePos.L.x + eyePos.R.x) / 2, y: (eyePos.L.y + eyePos.R.y) / 2 } : { x: W / 2, y: H * 0.26 };
   const eyeDist = eyePos.L && eyePos.R ? Math.hypot(eyePos.R.x - eyePos.L.x, eyePos.R.y - eyePos.L.y) : 60;
   const tilt = eyePos.L && eyePos.R ? Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x) : 0;
   const faceW = face ? Math.hypot(face.right.x - face.left.x, face.right.y - face.left.y) : eyeDist * 2.4;
-  img(STICKER.glasses, eyeMid.x, eyeMid.y, eyeDist * 2.7, { rot: tilt, flipY: true });
+  drawHeadphones(eyeMid, eyeDist, tilt); img(STICKER.glasses, eyeMid.x, eyeMid.y, eyeDist * 2.7, { rot: tilt, flipY: true });
   if (crowdFinal !== 'good') {
     const top = face ? face.top : { x: eyeMid.x, y: eyeMid.y - eyeDist * 1.2 };
     const t = performance.now() / 1000;
