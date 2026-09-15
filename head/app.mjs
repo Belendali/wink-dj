@@ -158,7 +158,7 @@ $('practice').onclick = () => { ensureAudio(); practice = true; $('phone').class
 $('startRound').onclick = () => beginCountdown();
 $('bothMode').onclick = () => { bothMode = true; beginCountdown(); };
 $('replay').onclick = () => showHowto();
-$('home').onclick = () => { clearTimeout(beginCountdown.t); clearTimeout(endRound.t); clearInterval(showHowto.iv); stopCamera(); setMode('idle'); };
+$('home').onclick = () => { clearTimeout(beginCountdown.t); clearTimeout(endRound.t); clearTimeout(showHowto.t4); stopCamera(); setMode('idle'); };
 
 async function startSetup() {
   setMode('setup'); show('calib', false); show('startRound', false); show('bothMode', false);
@@ -188,11 +188,15 @@ function stopCamera() { if (stream) { stream.getTracks().forEach((t) => t.stop()
 
 function showHowto() {
   ensureAudio(); setMode('howto'); clearTimeout(beginCountdown.t); guideStep = 0; guideDone = [false, false, false]; guideDoneAt = performance.now();
-  const hw = $('howto'), lbl = $('howtoLbl'); const setStep = (k) => { hw.dataset.step = k; lbl.textContent = k < GUIDE.length ? GUIDE[k].text : 'Let\'s go!'; };
-  setStep(0); $('howtoCta').textContent = practice ? 'Starting…' : 'Follow along';
-  let k = 0; clearInterval(showHowto.iv);
-  showHowto.iv = setInterval(() => { guideDone[k] = true; guideStep = ++k; guideDoneAt = performance.now(); setStep(k); if (!practice) sfx('count');
-    if (k >= GUIDE.length) { clearInterval(showHowto.iv); if (practice) beginCountdown.t = setTimeout(startCountdown, 500); else setTimeout(() => { if (mode === 'howto') startNow(); }, 400); } }, practice ? 900 : 1000);
+  const lbl = $('howtoLbl'), gi = $('guideImg'); gi.src = '../assets/guide/head.webp?r=' + Date.now(); // restart the animation from frame one
+  // label changes follow the animation: tilt left ~1.0 s, tilt right ~2.6 s, nod ~3.6 s, hair flip ~4.4 s, done at 5 s
+  const plan = [[0, 'Tilt left'], [1900, 'Tilt right'], [3300, 'Nod'], [4400, 'Let\'s go!']];
+  lbl.textContent = plan[0][1]; $('howtoCta').textContent = practice ? 'Starting…' : 'Follow along';
+  clearTimeout(showHowto.t1); clearTimeout(showHowto.t2); clearTimeout(showHowto.t3); clearTimeout(showHowto.t4);
+  showHowto.t1 = setTimeout(() => { lbl.textContent = plan[1][1]; guideDone[0] = true; guideStep = 1; if (!practice) sfx('count'); }, plan[1][0]);
+  showHowto.t2 = setTimeout(() => { lbl.textContent = plan[2][1]; guideDone[1] = true; guideStep = 2; if (!practice) sfx('count'); }, plan[2][0]);
+  showHowto.t3 = setTimeout(() => { lbl.textContent = plan[3][1]; guideDone[2] = true; guideStep = 3; if (!practice) sfx('count'); }, plan[3][0]);
+  showHowto.t4 = setTimeout(() => { if (mode !== 'howto') return; if (practice) startCountdown(); else startNow(); }, 5000);
 }
 function beginCountdown() { showHowto(); }
 function startCountdown() {
