@@ -3,7 +3,7 @@ const $ = (id) => document.getElementById(id);
 const video = $('cam'), canvas = $('scene'), ctx = canvas.getContext('2d');
 const W = 390; let H = 693, DPR = 1;
 let BPM = 80, BEAT = 60 / BPM; const SONG = 15, LEAD = 2.0;
-const PERFECT = 0.32, GOOD = 0.7; // generous: a head move is slower than a tap
+const PERFECT = 0.22, GOOD = 0.5; // tight enough that a late tilt reads as late; the first two notes and the shouts get extra room
 const BOOTH_W = W * 1.12, BOOTH_S = BOOTH_W / 900; // booth image is 900 px wide; platters at (238,677) and (662,677), table bottom at 830
 const BOOTH_TOP = () => H * 0.67 - 575 * BOOTH_S; // table top at 63% so the platters (the interaction) sit inside TikTok's core zone (y ≤ 533/694)
 const LANE_X = [(W - BOOTH_W) / 2 + 238 * BOOTH_S, (W - BOOTH_W) / 2 + 662 * BOOTH_S]; let HIT_Y = 0.88; // judge line: a whole character at the hit moment stays inside the visual zone (y ≤ 545/694)
@@ -296,9 +296,7 @@ function fire(lane, at = songTime) {
     const d = Math.min(Math.abs(n.t - t), Math.abs(n.t - t2)); if (d <= win && d < bestD) { bestD = d; best = n; }
   }
   let lenient = false;
-  if (!best) { // second pass: a wink read as "both" (or the other way round) still counts, capped at Good
-    for (const n of notes) { if (n.hit || n.lane === 3 || lane === 3) continue; const win = n.id < 2 ? GOOD * 1.5 : GOOD; const d = Math.min(Math.abs(n.t - t), Math.abs(n.t - t2)); if (d <= win && d < bestD) { bestD = d; best = n; lenient = true; } }
-  }
+  // no second chance on the wrong side: a left tilt when the right deck is due does not count
   if (!best) { if (DEBUG) dlog('no note in window'); return; }
   const grade = !lenient && bestD <= PERFECT ? 'perfect' : 'good';
   best.hit = grade; best.hitAt = songTime;
