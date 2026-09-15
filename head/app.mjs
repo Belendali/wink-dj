@@ -24,7 +24,7 @@ const BOOTH = '../assets/booth/booth.png', HAND = ['../assets/booth/hand-left.pn
 const NOTE = ['../assets/stickers/note-pink.png', '../assets/stickers/note-cyan.png', '../assets/stickers/note-record.png', '../assets/stickers/mic.png'];
 const GUIDE = [{ want: 0, text: 'Tilt left' }, { want: 2, text: 'Nod' }, { want: 1, text: 'Tilt right' }]; // images lean the way you see yourself in the mirror
 let guideDone = [false, false, false], guideDoneAt = 0, guideStep = 0;
-const STICKER = { glasses: '../assets/stickers/sunglasses.png', headphones: '../assets/stickers/headphones.png', chain: '../assets/stickers/chain.png', frustrated: '../assets/stickers/frustrated.png' };
+const STICKER = { glasses: '../assets/stickers/sunglasses.png', headphones: '../assets/stickers/headphones.png', frustrated: '../assets/stickers/frustrated.png' };
 const IMG = {};
 function loadImg(src) { if (IMG[src]) return IMG[src]; const i = new Image(); i.src = src; IMG[src] = i; return i; }
 PEOPLE.forEach((p) => Object.values(p).forEach(loadImg)); loadImg(BOOTH); HAND.forEach(loadImg); NOTE.forEach(loadImg); Object.values(STICKER).forEach(loadImg);
@@ -155,15 +155,15 @@ function cheer(big = false) { // a short noisy "whoo" from the crowd
 function roar() { // end-of-round crowd: a big rising whoo from many voices, a whistle, and claps on the beat
   if (!audioCtx) return; const t = audioCtx.currentTime;
   if (!noiseBuf) noise(t, 0.01, 0);
-  for (let v = 0; v < 6; v++) { const n = audioCtx.createBufferSource(); n.buffer = noiseBuf; n.loop = true; const f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(400 + v * 180, t); f.frequency.exponentialRampToValueAtTime(1900 + v * 350, t + 1.4); f.Q.value = 1.3; const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t + v * 0.06); g.gain.exponentialRampToValueAtTime(0.16, t + 0.25 + v * 0.06); g.gain.setValueAtTime(0.16, t + 1.3); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4); n.connect(f).connect(g).connect(audioCtx.destination); n.start(t); n.stop(t + 2.5); }
-  for (let i = 0; i < 6; i++) { const at = t + 0.5 + i * BEAT / 2; noise(at, 0.08, 0.22); noise(at + 0.02, 0.06, 0.14); } // the crowd claps along
-  tone(2200, t + 0.5, 0.35, 'sine', 0.09, 3200); tone(3200, t + 0.85, 0.3, 'sine', 0.07, 2400); // whistle
+  for (let v = 0; v < 6; v++) { const n = audioCtx.createBufferSource(); n.buffer = noiseBuf; n.loop = true; const f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(400 + v * 180, t); f.frequency.exponentialRampToValueAtTime(1900 + v * 350, t + 1.4); f.Q.value = 1.3; const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t + v * 0.06); g.gain.exponentialRampToValueAtTime(0.08, t + 0.25 + v * 0.06); g.gain.setValueAtTime(0.08, t + 1.3); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4); n.connect(f).connect(g).connect(audioCtx.destination); n.start(t); n.stop(t + 2.5); }
+  for (let i = 0; i < 6; i++) { const at = t + 0.5 + i * BEAT / 2; noise(at, 0.08, 0.1); noise(at + 0.02, 0.06, 0.06); } // the crowd claps along
+  tone(2200, t + 0.5, 0.35, 'sine', 0.05, 3200); tone(3200, t + 0.85, 0.3, 'sine', 0.04, 2400); // whistle
 }
 function fanfare() { // the win hit: a big chord with a sub, a cymbal wash, and a rising run on top
   if (!audioCtx) return; const t = audioCtx.currentTime;
-  [262, 330, 392, 523].forEach((f) => { tone(f, t, 1.2, 'sawtooth', 0.1); tone(f * 2, t, 0.9, 'triangle', 0.06); });
-  tone(65, t, 1.1, 'sine', 0.5, 50); noise(t, 0.6, 0.25); noise(t + 0.02, 0.9, 0.12);
-  [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, t + 0.15 + i * 0.07, 0.45, 'square', 0.09));
+  [262, 330, 392, 523].forEach((f) => { tone(f, t, 1.2, 'sawtooth', 0.05); tone(f * 2, t, 0.9, 'triangle', 0.03); });
+  tone(65, t, 1.1, 'sine', 0.3, 50); noise(t, 0.6, 0.08); noise(t + 0.02, 0.9, 0.04);
+  [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, t + 0.15 + i * 0.07, 0.45, 'square', 0.045));
 }
 function scratch() { // miss: a record scratch and a low boo
   if (!audioCtx) return; const t = audioCtx.currentTime; riff = Math.max(0, riff - 2);
@@ -280,7 +280,7 @@ function endRound() {
   const total = notes.length, hits = stats.perfect + stats.good, pct = total ? Math.round(hits / total * 100) : 0;
   $('rPct').textContent = pct + '%'; $('rLine').textContent = hits + ' of ' + total + ' beats landed';
   $('resultTitle').textContent = pct >= 90 ? 'The club is yours.' : pct >= 70 ? 'Crowd is moving.' : pct >= 40 ? 'Warming up.' : 'They want the aux back.';
-  showcase = []; crowdFinal = pct >= 50 ? 'good' : 'bad'; if (crowdFinal === 'good') { fanfare(); roar(); stinger('great', 1, 0.2); } else scratch();
+  showcase = []; crowdFinal = pct >= 50 ? 'good' : 'bad'; if (crowdFinal === 'good') { fanfare(); roar(); stinger('great', 0.7, 0.2); } else scratch();
   show('rbtns', false); clearTimeout(endRound.t); endRound.t = setTimeout(() => show('rbtns'), 5000);
   resultAt = performance.now();
   confetti = crowdFinal !== 'good' ? [] : Array.from({ length: 90 }, () => ({ x: Math.random() * W, y: -Math.random() * H, vx: (Math.random() - .5) * 40, vy: 80 + Math.random() * 120, r: 4 + Math.random() * 5, c: ['#ff5c8a', '#ffb3c8', '#b58cff', '#ffe052', '#fff7fb'][Math.floor(Math.random() * 5)], a: Math.random() * TAU }));
@@ -483,7 +483,7 @@ function drawHeadphones(m, d, tilt) { // cups sit on the ears (a touch below eye
   const w = d * 3.15, k = 0.223 * w, cy = m.y + d * 0.18; img(STICKER.headphones, m.x + Math.sin(tilt) * k, cy - Math.cos(tilt) * k, w, { rot: tilt });
 }
 function drawShades() { if (!eyePos.L || !eyePos.R || practice) return; const m = { x: (eyePos.L.x + eyePos.R.x) / 2, y: (eyePos.L.y + eyePos.R.y) / 2 }, d = Math.hypot(eyePos.R.x - eyePos.L.x, eyePos.R.y - eyePos.L.y), tilt = Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x); drawHeadphones(m, d, tilt); img(STICKER.glasses, m.x, m.y, d * 2.7, { rot: tilt }); }
-function drawFaceSticker() { // the verdict on the player's own face: shades + chain, or a frustration cloud
+function drawFaceSticker() { // the verdict on the player's own face: headphones and shades, plus a frustration cloud on a bad round
   const eyeMid = eyePos.L && eyePos.R ? { x: (eyePos.L.x + eyePos.R.x) / 2, y: (eyePos.L.y + eyePos.R.y) / 2 } : { x: W / 2, y: H * 0.26 };
   const eyeDist = eyePos.L && eyePos.R ? Math.hypot(eyePos.R.x - eyePos.L.x, eyePos.R.y - eyePos.L.y) : 60;
   const tilt = eyePos.L && eyePos.R ? Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x) : 0;

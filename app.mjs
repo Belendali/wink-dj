@@ -22,7 +22,7 @@ let audioCtx = null, schedulerId = 0, nextBeat = 0, beatIndex = 0;
 const PEOPLE = Array.from({ length: 10 }, (_, i) => { const n = String(i + 1).padStart(2, '0'); return { wait: `assets/people/p${n}-wait.png`, good: `assets/people/p${n}-good.png`, bad: `assets/people/p${n}-bad.png` }; });
 const BOOTH = 'assets/booth/booth.png', HAND = ['assets/booth/hand-left.png', 'assets/booth/hand-right.png'];
 const NOTE = ['assets/stickers/note-pink.png', 'assets/stickers/note-cyan.png', 'assets/stickers/note-record.png'];
-const STICKER = { glasses: 'assets/stickers/sunglasses.png', chain: 'assets/stickers/chain.png', frustrated: 'assets/stickers/frustrated.png' };
+const STICKER = { glasses: 'assets/stickers/sunglasses.png', frustrated: 'assets/stickers/frustrated.png' };
 const IMG = {};
 function loadImg(src) { if (IMG[src]) return IMG[src]; const i = new Image(); i.src = src; IMG[src] = i; return i; }
 PEOPLE.forEach((p) => Object.values(p).forEach(loadImg)); loadImg(BOOTH); HAND.forEach(loadImg); NOTE.forEach(loadImg); Object.values(STICKER).forEach(loadImg);
@@ -416,7 +416,7 @@ function drawInner() {
   drawHearts(dt);
   ctx.textBaseline = 'alphabetic';
 }
-function drawFaceSticker() { // the verdict on the player's own face: shades + chain, or a frustration cloud
+function drawFaceSticker() { // the verdict on the player's own face: shades, or a frustration cloud
   const eyeMid = eyePos.L && eyePos.R ? { x: (eyePos.L.x + eyePos.R.x) / 2, y: (eyePos.L.y + eyePos.R.y) / 2 } : { x: W / 2, y: H * 0.26 };
   const eyeDist = eyePos.L && eyePos.R ? Math.hypot(eyePos.R.x - eyePos.L.x, eyePos.R.y - eyePos.L.y) : 60;
   const tilt = eyePos.L && eyePos.R ? Math.atan2(eyePos.R.y - eyePos.L.y, eyePos.R.x - eyePos.L.x) : 0;
