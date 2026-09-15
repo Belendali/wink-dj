@@ -84,3 +84,18 @@ h2 { font-size: 24px; margin: 8px 0 8px; }
 
 .howto { padding-top: 12%; justify-content: flex-start; }
 .howto em { margin-top: 6px; }
+
+/* the guide: a white line DJ who tilts, nods and tilts, driven by data-step */
+.howto .gh { display: block; margin-bottom: 4px; filter: drop-shadow(0 2px 10px rgba(0,0,0,.45)); }
+.howto .gh .head { transform-origin: 120px 150px; transform-box: view-box; transition: transform .5s cubic-bezier(.34,1.45,.64,1); }
+.howto[data-step="0"] .gh .head { transform: rotate(-22deg); }
+.howto[data-step="1"] .gh .head { transform: translateY(16px) scaleY(.9); }
+.howto[data-step="2"] .gh .head { transform: rotate(22deg); }
+.howto[data-step="3"] .gh .head { animation: bop .5s ease-in-out infinite; }
+@keyframes bop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+.howto .gh .arrows path { stroke: #00f2ea; opacity: .18; transition: opacity .3s ease, transform .3s ease; }
+.howto[data-step="0"] .gh .al, .howto[data-step="1"] .gh .ad, .howto[data-step="2"] .gh .ar { opacity: 1; }
+.howto[data-step="3"] .gh .arrows { opacity: 0; }
+.howto b { font-size: 21px; }
+.howto span { font-size: 15px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: 1; color: #00f2ea; }
+.howto { padding-top: 16%; }

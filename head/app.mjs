@@ -22,12 +22,12 @@ let audioCtx = null, schedulerId = 0, nextBeat = 0, beatIndex = 0;
 const PEOPLE = Array.from({ length: 10 }, (_, i) => { const n = String(i + 1).padStart(2, '0'); return { wait: `../assets/people/p${n}-wait.png`, good: `../assets/people/p${n}-good.png`, bad: `../assets/people/p${n}-bad.png` }; });
 const BOOTH = '../assets/booth/booth.png', HAND = ['../assets/booth/hand-left.png', '../assets/booth/hand-right.png'];
 const NOTE = ['../assets/stickers/note-pink.png', '../assets/stickers/note-cyan.png', '../assets/stickers/note-record.png'];
-const GUIDE = [{ img: '../assets/guide/tilt-right.png', want: 0, text: 'Tilt left' }, { img: '../assets/guide/nod.png', want: 2, text: 'Nod' }, { img: '../assets/guide/tilt-left.png', want: 1, text: 'Tilt right' }]; // images lean the way you see yourself in the mirror
+const GUIDE = [{ want: 0, text: 'Tilt left' }, { want: 2, text: 'Nod' }, { want: 1, text: 'Tilt right' }]; // images lean the way you see yourself in the mirror
 let guideDone = [false, false, false], guideDoneAt = 0, guideStep = 0;
 const STICKER = { glasses: '../assets/stickers/sunglasses.png', headphones: '../assets/stickers/headphones.png', chain: '../assets/stickers/chain.png', frustrated: '../assets/stickers/frustrated.png' };
 const IMG = {};
 function loadImg(src) { if (IMG[src]) return IMG[src]; const i = new Image(); i.src = src; IMG[src] = i; return i; }
-PEOPLE.forEach((p) => Object.values(p).forEach(loadImg)); loadImg(BOOTH); HAND.forEach(loadImg); NOTE.forEach(loadImg); Object.values(STICKER).forEach(loadImg); GUIDE.forEach((g) => loadImg(g.img));
+PEOPLE.forEach((p) => Object.values(p).forEach(loadImg)); loadImg(BOOTH); HAND.forEach(loadImg); NOTE.forEach(loadImg); Object.values(STICKER).forEach(loadImg);
 function img(src, x, y, w, opts = {}) { const i = loadImg(src); if (!ready(src)) return false; const h = w * i.naturalHeight / i.naturalWidth; ctx.save(); ctx.translate(x, y); ctx.rotate(opts.rot || 0); if (opts.flipY) ctx.scale(1, -1); ctx.globalAlpha = opts.alpha ?? 1; ctx.drawImage(i, -w / 2, -h * (opts.ay ?? 0.5), w, h); ctx.restore(); return true; }
 const ready = (src) => { const i = IMG[src]; return i && i.complete && i.naturalWidth > 0; };
 const PERSON_H = 150;
@@ -188,9 +188,11 @@ function stopCamera() { if (stream) { stream.getTracks().forEach((t) => t.stop()
 
 function showHowto() {
   ensureAudio(); setMode('howto'); clearTimeout(beginCountdown.t); guideStep = 0; guideDone = [false, false, false]; guideDoneAt = performance.now();
-  if (!practice) { let k = 0; clearInterval(showHowto.iv); showHowto.iv = setInterval(() => { guideDone[k] = true; guideStep = ++k; guideDoneAt = performance.now(); sfx('count'); if (k >= GUIDE.length) { clearInterval(showHowto.iv); setTimeout(() => { if (mode === 'howto') startNow(); }, 400); } }, 1000); }
-  $('howtoCta').textContent = practice ? 'Starting…' : 'Follow along';
-  if (practice) { let k = 0; const iv = setInterval(() => { guideDone[k] = true; guideStep = ++k; guideDoneAt = performance.now(); if (k >= GUIDE.length) { clearInterval(iv); beginCountdown.t = setTimeout(startCountdown, 500); } }, 900); }
+  const hw = $('howto'), lbl = $('howtoLbl'); const setStep = (k) => { hw.dataset.step = k; lbl.textContent = k < GUIDE.length ? GUIDE[k].text : 'Let\'s go!'; };
+  setStep(0); $('howtoCta').textContent = practice ? 'Starting…' : 'Follow along';
+  let k = 0; clearInterval(showHowto.iv);
+  showHowto.iv = setInterval(() => { guideDone[k] = true; guideStep = ++k; guideDoneAt = performance.now(); setStep(k); if (!practice) sfx('count');
+    if (k >= GUIDE.length) { clearInterval(showHowto.iv); if (practice) beginCountdown.t = setTimeout(startCountdown, 500); else setTimeout(() => { if (mode === 'howto') startNow(); }, 400); } }, practice ? 900 : 1000);
 }
 function beginCountdown() { showHowto(); }
 function startCountdown() {
@@ -374,17 +376,6 @@ function drawInner() {
   if (!['playing', 'countdown', 'howto'].includes(mode)) return;
   const hy = H * HIT_Y;
   drawLights(dt); drawBooth(dt); drawCrowd(); drawShades();
-  if (mode === 'howto') { // the guide: do each move once — tilt left, nod, tilt right — then the round starts
-    const t = performance.now() / 1000, step = Math.min(guideStep, GUIDE.length - 1), g = GUIDE[step], gy = H * 0.5;
-    const pop = guideDoneAt && performance.now() - guideDoneAt < 300 ? 1 - (performance.now() - guideDoneAt) / 300 : 0;
-    img(g.img, W / 2, gy, 210 + pop * 30, { rot: Math.sin(t * 2) * 0.02 });
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = '900 26px system-ui'; ctx.fillStyle = '#fff'; ctx.fillText(guideStep >= GUIDE.length ? 'Let\'s go!' : g.text, W / 2, gy + 130);
-    GUIDE.forEach((gg, i) => { const x = W / 2 + (i - 1) * 44, done = guideDone[i]; ctx.beginPath(); ctx.arc(x, gy + 168, 9, 0, TAU); ctx.fillStyle = done ? '#00f2ea' : i === guideStep ? '#fff' : 'rgba(255,255,255,.3)'; ctx.fill(); if (done) { ctx.strokeStyle = '#0b0b16'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 4, gy + 168); ctx.lineTo(x - 1, gy + 171); ctx.lineTo(x + 4, gy + 165); ctx.stroke(); } });
-    if (g.want !== 2) { const dir = g.want === 0 ? -1 : 1; ctx.font = '900 34px system-ui'; ctx.fillStyle = '#00f2ea'; ctx.fillText(dir < 0 ? '←' : '→', W / 2 + dir * 150, gy - 40); }
-    else { ctx.font = '900 34px system-ui'; ctx.fillStyle = '#00f2ea'; ctx.fillText('↓', W / 2, gy - 140); }
-    ctx.textBaseline = 'alphabetic';
-  }
   if (mode !== 'playing') return;
   // music notes dropping onto the decks
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

@@ -46,9 +46,25 @@
       </div>
     </div>
 
-    <div id="howto" class="howto hidden">
-            <b>Warm up first</b>
-      <span>Tilt left, nod, tilt right. The beat starts in a moment.</span>
+    <div id="howto" class="howto hidden" data-step="0">
+      <svg class="gh" viewBox="0 0 240 200" width="240" height="200" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <g class="arrows">
+          <path class="al" d="M40 60 C 26 78, 26 104, 40 120 M30 110 l10 10 l12 -6"/>
+          <path class="ar" d="M200 60 C 214 78, 214 104, 200 120 M210 110 l-10 10 l-12 -6"/>
+          <path class="ad" d="M120 4 v26 M110 20 l10 10 l10 -10"/>
+        </g>
+        <path class="body" d="M38 198 C 70 160, 170 160, 202 198 M108 150 v16 M132 150 v16"/>
+        <g class="head">
+          <path d="M120 44 C 160 44, 178 72, 178 102 C 178 136, 150 152, 120 152 C 90 152, 62 136, 62 102 C 62 72, 80 44, 120 44 Z"/>
+          <path d="M72 86 C 92 62, 148 62, 168 86"/>
+          <path d="M60 100 C 60 52, 180 52, 180 100"/>
+          <rect x="50" y="92" width="14" height="28" rx="6"/><rect x="176" y="92" width="14" height="28" rx="6"/>
+          <circle cx="102" cy="104" r="4.5" fill="#fff" stroke="none"/><circle cx="138" cy="104" r="4.5" fill="#fff" stroke="none"/>
+          <path d="M106 126 C 113 135, 127 135, 134 126"/>
+        </g>
+      </svg>
+      <b>Shake head to drop the beat</b>
+      <span id="howtoLbl">Tilt left</span>
       <em id="howtoCta"></em>
     </div>
     <div id="countdown" class="countdown hidden"></div>
@@ -66,6 +82,6 @@
     </div>
   </section>
 </main>
-<script type="module" src="./app.mjs?v=24"></script>
+<script type="module" src="./app.mjs?v=25"></script>
 </body>
 </html>
