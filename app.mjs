@@ -2,7 +2,7 @@
 const $ = (id) => document.getElementById(id);
 const video = $('cam'), canvas = $('scene'), ctx = canvas.getContext('2d');
 const W = 390; let H = 693, DPR = 1;
-const BPM = 80, BEAT = 60 / BPM, SONG = 15, LEAD = 2.0;
+let BPM = 80, BEAT = 60 / BPM; const SONG = 15, LEAD = 2.0;
 const PERFECT = 0.28, GOOD = 0.6; // generous: a wink is slower than a tap
 const BOOTH_W = W * 1.12, BOOTH_S = BOOTH_W / 900; // booth image is 900 px wide; platters at (238,677) and (662,677), table bottom at 830
 const BOOTH_TOP = () => H * 0.67 - 575 * BOOTH_S; // table top at 63% so the platters (the interaction) sit inside TikTok's core zone (y ≤ 533/694)
@@ -71,20 +71,34 @@ function noise(t, dur, gain = 0.08) {
   f.type = 'highpass'; f.frequency.value = 6000; s.buffer = noiseBuf; g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   s.connect(f).connect(g).connect(audioCtx.destination); s.start(t); s.stop(t + dur + 0.01);
 }
-const BASS = [55, 0, 55, 82, 0, 55, 73, 98];          // per 8th note, two beats
-const CHORDS = [[262, 330, 392], [294, 349, 440], [330, 392, 494], [294, 349, 440]];
-const MELODY = [523, 0, 659, 784, 0, 659, 587, 0, 523, 659, 0, 784, 880, 0, 784, 659, 587, 0, 523, 0, 659, 0, 523, 0, 587, 659, 0, 587, 523, 0, 0, 0];
+// three grooves; one is dealt at random each round (never the same one twice in a row)
+const TRACKS = [
+  { name: 'Neon Funk', bpm: 80, kick: 'four', hats: '16', snare: 'snare', bassType: 'square', bassGain: 0.11, chordType: 'sawtooth', chordEvery: 2, chordDur: 0.12, melType: 'triangle',
+    bass: [55, 0, 55, 82, 0, 55, 73, 98], chords: [[262, 330, 392], [294, 349, 440], [330, 392, 494], [294, 349, 440]],
+    melody: [523, 0, 659, 784, 0, 659, 587, 0, 523, 659, 0, 784, 880, 0, 784, 659, 587, 0, 523, 0, 659, 0, 523, 0, 587, 659, 0, 587, 523, 0, 0, 0] },
+  { name: 'Deep House', bpm: 88, kick: 'four', hats: 'open', snare: 'clap', bassType: 'sine', bassGain: 0.16, chordType: 'sawtooth', chordEvery: 1, chordDur: 0.2, melType: 'sine',
+    bass: [73, 0, 73, 73, 0, 87, 0, 65], chords: [[294, 349, 440, 523], [262, 330, 392, 494], [233, 294, 349, 440], [262, 330, 392, 494]],
+    melody: [0, 0, 880, 0, 0, 784, 0, 0, 0, 0, 659, 0, 784, 0, 0, 0, 0, 0, 880, 0, 0, 1047, 0, 0, 0, 784, 0, 0, 659, 0, 0, 0] },
+  { name: 'Lo-fi Bounce', bpm: 74, kick: 'half', hats: '8swing', snare: 'snare', bassType: 'triangle', bassGain: 0.2, chordType: 'triangle', chordEvery: 2, chordDur: 0.35, melType: 'square',
+    bass: [49, 0, 0, 49, 0, 73, 0, 65], chords: [[196, 247, 294, 370], [175, 220, 262, 330], [147, 185, 220, 277], [165, 208, 247, 311]],
+    melody: [392, 0, 0, 440, 0, 494, 0, 0, 587, 0, 0, 494, 0, 440, 0, 0, 392, 0, 0, 330, 0, 392, 0, 0, 440, 0, 0, 0, 392, 0, 0, 0] },
+];
+let TR = TRACKS[0], lastTrack = -1;
+function pickTrack() { let i; do { i = Math.floor(Math.random() * TRACKS.length); } while (i === lastTrack && TRACKS.length > 1); lastTrack = i; TR = TRACKS[i]; BPM = TR.bpm; BEAT = 60 / BPM; return TR; }
 function scheduleBeats() {
   const now = audioCtx.currentTime, step = BEAT / 4; // 16th notes
   while (nextBeat < now + 0.25) {
     const i = beatIndex, beat = Math.floor(i / 4), sub = ((i % 4) + 4) % 4, eighth = Math.floor(i / 2);
+    const swing = TR.hats === '8swing' && sub === 2 ? step * 0.18 : 0; // lo-fi drags the offbeat
     if (i < 0) { if (sub === 0) tone(150, nextBeat, 0.16, 'sine', 0.5, 40); noise(nextBeat, 0.04, 0.05); nextBeat += step; beatIndex++; continue; } // count-in: kick + hats only
-    if (sub === 0) tone(150, nextBeat, 0.16, 'sine', 0.7, 40);                        // kick on every beat
-    if (sub === 0 && beat % 2 === 1) { noise(nextBeat, 0.14, 0.26); tone(180, nextBeat, 0.08, 'triangle', 0.22); } // snare on 2 and 4
-    noise(nextBeat, sub % 2 ? 0.03 : 0.05, sub === 2 ? 0.13 : 0.07);                 // 16th hats, open on the offbeat
-    if (sub % 2 === 0) { const bnote = BASS[eighth % 8]; if (bnote) tone(bnote, nextBeat, step * 1.6, 'square', 0.11); }
-    if (sub === 2 && beat % 2 === 0) CHORDS[Math.floor(beat / 2) % 4].forEach((f) => tone(f, nextBeat, 0.12, 'sawtooth', 0.025)); // offbeat stab
-    if (sub % 2 === 0) { const m = MELODY[eighth % 32]; if (m) tone(m, nextBeat, 0.22, 'triangle', 0.05); }
+    if (sub === 0 && (TR.kick === 'four' || beat % 2 === 0)) tone(150, nextBeat, 0.16, 'sine', 0.7, 40);       // kick: every beat, or 1 and 3
+    if (sub === 0 && beat % 2 === 1) { if (TR.snare === 'clap') { noise(nextBeat, 0.09, 0.3); noise(nextBeat + 0.02, 0.07, 0.18); } else { noise(nextBeat, 0.14, 0.26); tone(180, nextBeat, 0.08, 'triangle', 0.22); } } // snare or clap on 2 and 4
+    if (TR.hats === '16') noise(nextBeat, sub % 2 ? 0.03 : 0.05, sub === 2 ? 0.13 : 0.07);                     // 16th hats, open on the offbeat
+    else if (TR.hats === 'open') { if (sub === 0) noise(nextBeat, 0.03, 0.06); if (sub === 2) noise(nextBeat, 0.16, 0.16); } // house: open hat on every offbeat
+    else if (sub % 2 === 0) noise(nextBeat + swing, sub === 2 ? 0.06 : 0.03, sub === 2 ? 0.1 : 0.06);          // lazy 8ths with swing
+    if (sub % 2 === 0) { const bnote = TR.bass[eighth % 8]; if (bnote) tone(bnote, nextBeat + swing, step * 1.6, TR.bassType, TR.bassGain); }
+    if (sub === 2 && beat % TR.chordEvery === 0) TR.chords[Math.floor(beat / 2) % 4].forEach((f) => tone(f, nextBeat + swing, TR.chordDur, TR.chordType, TR.chords[0].length > 3 ? 0.02 : 0.025)); // offbeat stab
+    if (sub % 2 === 0) { const m = TR.melody[eighth % 32]; if (m) tone(m, nextBeat + swing, 0.22, TR.melType, TR.melType === 'square' ? 0.03 : 0.05); }
     nextBeat += step; beatIndex++;
   }
   schedulerId = setTimeout(scheduleBeats, 60);
@@ -194,7 +208,7 @@ function showHowto() {
 }
 function beginCountdown() { showHowto(); }
 function startCountdown() {
-  notes = makeChart(); effects = []; faceBest = faceWorst = null; confetti = []; blinkStats = { both: 0, single: 0 }; pickCrowd();
+  pickTrack(); notes = makeChart(); effects = []; faceBest = faceWorst = null; confetti = []; blinkStats = { both: 0, single: 0 }; pickCrowd();
   stats = { perfect: 0, good: 0, miss: 0, combo: 0, maxCombo: 0, score: 0 }; updateHud();
   setMode('countdown');
   // three-beat count-in on the actual groove: the round starts on beat four
@@ -210,7 +224,7 @@ function pickCrowd() { // five different people, fresh each round
 }
 function crowdReact(state, dur) { const t = songTime; for (const c of crowd) { c.state = state; c.until = t + dur + Math.random() * 0.25; } }
 function startNow() { // camera flow: the first wink is the start button, no countdown
-  notes = makeChart(); effects = []; confetti = []; blinkStats = { both: 0, single: 0 }; pickCrowd();
+  pickTrack(); notes = makeChart(); effects = []; confetti = []; blinkStats = { both: 0, single: 0 }; pickCrowd();
   stats = { perfect: 0, good: 0, miss: 0, combo: 0, maxCombo: 0, score: 0 }; updateHud();
   ensureAudio(); startAt = audioCtx.currentTime + 0.05; nextBeat = startAt; beatIndex = 0; clearTimeout(schedulerId); scheduleBeats(); sfx('go');
   startRound();
