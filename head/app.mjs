@@ -189,14 +189,14 @@ function stopCamera() { if (stream) { stream.getTracks().forEach((t) => t.stop()
 function showHowto() {
   ensureAudio(); setMode('howto'); clearTimeout(beginCountdown.t); guideStep = 0; guideDone = [false, false, false]; guideDoneAt = performance.now();
   const lbl = $('howtoLbl'), gi = $('guideImg'); gi.src = '../assets/guide/head.webp?r=' + Date.now(); // restart the animation from frame one
-  // label changes follow the animation: tilt left ~1.0 s, tilt right ~2.6 s, nod ~3.6 s, hair flip ~4.4 s, done at 5 s
-  const plan = [[0, 'Tilt left'], [1900, 'Tilt right'], [3300, 'Nod'], [4400, 'Let\'s go!']];
+  // the animation is 3 s: tilt left peaks ~0.6 s, tilt right ~1.6 s, nod ~2.2 s, hair flip ~2.7 s; labels change as each move begins
+  const plan = [[0, 'Tilt left'], [1050, 'Tilt right'], [2000, 'Nod'], [2600, 'Let\'s go!']];
   lbl.textContent = plan[0][1]; $('howtoCta').textContent = practice ? 'Starting…' : 'Follow along';
   clearTimeout(showHowto.t1); clearTimeout(showHowto.t2); clearTimeout(showHowto.t3); clearTimeout(showHowto.t4);
   showHowto.t1 = setTimeout(() => { lbl.textContent = plan[1][1]; guideDone[0] = true; guideStep = 1; if (!practice) sfx('count'); }, plan[1][0]);
   showHowto.t2 = setTimeout(() => { lbl.textContent = plan[2][1]; guideDone[1] = true; guideStep = 2; if (!practice) sfx('count'); }, plan[2][0]);
   showHowto.t3 = setTimeout(() => { lbl.textContent = plan[3][1]; guideDone[2] = true; guideStep = 3; if (!practice) sfx('count'); }, plan[3][0]);
-  showHowto.t4 = setTimeout(() => { if (mode !== 'howto') return; if (practice) startCountdown(); else startNow(); }, 5000);
+  showHowto.t4 = setTimeout(() => { if (mode !== 'howto') return; if (practice) startCountdown(); else startNow(); }, 3000);
 }
 function beginCountdown() { showHowto(); }
 function startCountdown() {
